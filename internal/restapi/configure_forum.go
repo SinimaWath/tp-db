@@ -17,7 +17,7 @@ import (
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
 )
 
-//go:generate swagger generate server --target ../.. --name Forum --spec ../../api/swagger.yml
+//go:generate swagger generate server --target .. --name Forum --spec ../../api/swagger.yml
 //go:generate go-bindata -pkg assets_ui -o ../modules/assets/assets_ui/assets_ui.go -prefix ../../api/swagger-ui/ ../../api/swagger-ui/...
 //go:generate go-bindata -pkg assets_db -o ../modules/assets/assets_db/assets_db.go -prefix ../../assets/ ../../assets/...
 

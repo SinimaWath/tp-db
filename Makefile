@@ -29,6 +29,15 @@ download-generators:
 	mkdir -p vendor/github.com/jteeuwen/go-bindata/
 	git clone https://github.com/jteeuwen/go-bindata vendor/github.com/jteeuwen/go-bindata/
 
+docker-start: download-generators
+	docker build -t tp-db -f deploy/Dockerfile.golang .
+	./deploy/runDocker.sh
+
+docker-stop:
+	./deploy/stopDocker.sh
+
+docker-run:
+	./deploy/runDocker.sh
 
 clear:
 	rm -rf internal/cmd/ internal/restapi/operations/ internal/models internal/modules/assets/
