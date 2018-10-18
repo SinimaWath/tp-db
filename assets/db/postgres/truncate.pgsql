@@ -1,0 +1,1 @@
+TRUNCATE ONLY "user", forum, thread;

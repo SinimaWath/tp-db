@@ -1,15 +1,24 @@
 package service
 
 import (
-	"github.com/SinimaWath/tp-db/internal/restapi/operations"
-	"github.com/go-openapi/runtime/middleware"
-	"github.com/jmoiron/sqlx"
+	"database/sql"
+	"log"
+)
+
+const postgres = "postgres"
+
+const (
+	pgErrCodeUniqueViolation = "23505"
 )
 
 type ForumPgsql struct {
-	db *sqlx.DB
+	db *sql.DB
 }
 
-func (ForumPgsql) ForumCreate(operations.ForumCreateParams) middleware.Responder {
-
+func NewForumPgsql(dsn string) *ForumPgsql {
+	db, err := sql.Open(postgres, dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &ForumPgsql{db}
 }

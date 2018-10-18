@@ -7,4 +7,7 @@ import (
 
 type ForumHandler interface {
 	ForumCreate(operations.ForumCreateParams) middleware.Responder
+	UserCreate(operations.UserCreateParams) middleware.Responder
+	UserGetOne(operations.UserGetOneParams) middleware.Responder
+	UserUpdate(operations.UserUpdateParams) middleware.Responder
 }
