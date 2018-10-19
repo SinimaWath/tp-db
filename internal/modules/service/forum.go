@@ -55,6 +55,14 @@ func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware
 	}
 }
 
+func checkForumExist(db *sql.DB, slug string) bool {
+	querySelect := `SELECT EXISTS(SELECT 1 FROM forum where slug = $1)`
+	row := db.QueryRow(querySelect, slug)
+	isExist := false
+	row.Scan(&isExist)
+	return isExist
+}
+
 func selectForum(db *sql.DB, slug string, forum *models.Forum) error {
 	querySelect := `SELECT u.nickname, f.slug, f.title FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $1`
 

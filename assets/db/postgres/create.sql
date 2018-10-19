@@ -21,10 +21,10 @@ CREATE TABLE forum (
 
 CREATE TABLE thread (
   id BIGSERIAL PRIMARY KEY,
+  slug citext unique not null ,
   forum_slug citext references forum,
   user_nick citext references "user",
-  created timestamp,
-  slug text not null,
+  created timestamp with time zone,
   title text not null,
   message text not null
 );

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -64,4 +65,19 @@ func (pg ForumPgsql) UserGetOne(params operations.UserGetOneParams) middleware.R
 		log.Println(err)
 		return nil
 	}
+}
+
+func selectUser(db *sql.DB, user *models.User, nickname string) error {
+	querySelect := `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1`
+
+	row := db.QueryRow(querySelect, nickname)
+
+	if err := row.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname); err != nil {
+		if err == sql.ErrNoRows {
+			return errNotFound
+		}
+		return err
+	}
+
+	return nil
 }
