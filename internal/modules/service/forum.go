@@ -12,24 +12,18 @@ import (
 )
 
 func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware.Responder {
-	queryInsert := `INSERT INTO forum (user_nick, slug, title) VALUES ($1, $2, $3)`
+	err := insertForum(pg.db, params.Forum.User, params.Forum.Slug, params.Forum.Title)
 
-	_, err := pg.db.Exec(queryInsert, params.Forum.User, params.Forum.Slug, params.Forum.Title)
-	if err, ok := err.(*pq.Error); ok && err != nil {
-		if err.Code == pgErrCodeUniqueViolation {
-			forum := &models.Forum{}
-			if err := selectForum(pg.db, params.Forum.Slug, forum); err != nil {
-				log.Println(err)
-				return nil
-			}
-			return operations.NewForumCreateConflict().WithPayload(forum)
+	if err == errForeignKeyViolation {
+		responseError := models.Error{Message: fmt.Sprintf("Can't find user with nickname: %v", params.Forum.User)}
+		return operations.NewForumCreateNotFound().WithPayload(&responseError)
+	} else if err == errUniqueViolation {
+		forum := &models.Forum{}
+		if err := selectForum(pg.db, params.Forum.Slug, forum); err != nil {
+			log.Println(err)
+			return nil
 		}
-		if err.Code == pgErrForeignKeyViolation {
-			responseError := models.Error{Message: fmt.Sprintf("Can't find user with nickname: %v", params.Forum.User)}
-			return operations.NewForumCreateNotFound().WithPayload(&responseError)
-		}
-		log.Println(err.Code)
-		return nil
+		return operations.NewForumCreateConflict().WithPayload(forum)
 	}
 
 	forum := &models.Forum{}
@@ -53,6 +47,23 @@ func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware
 		log.Println(err)
 		return nil
 	}
+}
+
+func insertForum(db *sql.DB, user, slug, title string) error {
+	queryInsert := `INSERT INTO forum (user_nick, slug, title) VALUES ($1, $2, $3)`
+	_, err := db.Exec(queryInsert, user, slug, title)
+	if err, ok := err.(*pq.Error); ok && err != nil {
+		if err.Code == pgErrCodeUniqueViolation {
+			return errUniqueViolation
+		} else if err.Code == pgErrForeignKeyViolation {
+			return errForeignKeyViolation
+		}
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func checkForumExist(db *sql.DB, slug string) bool {
