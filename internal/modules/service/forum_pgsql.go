@@ -9,6 +9,7 @@ const postgres = "postgres"
 
 const (
 	pgErrCodeUniqueViolation = "23505"
+	pgErrForeignKeyViolation = "23503"
 )
 
 type ForumPgsql struct {

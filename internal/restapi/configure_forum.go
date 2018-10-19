@@ -61,11 +61,9 @@ func configureAPI(api *operations.ForumAPI) http.Handler {
 	api.UserCreateHandler = operations.UserCreateHandlerFunc(handler.UserCreate)
 	api.UserGetOneHandler = operations.UserGetOneHandlerFunc(handler.UserGetOne)
 	api.UserUpdateHandler = operations.UserUpdateHandlerFunc(handler.UserUpdate)
-
+	api.ForumGetOneHandler = operations.ForumGetOneHandlerFunc(handler.ForumGetOne)
+	api.ThreadCreateHandler = operations.ThreadCreateHandlerFunc(handler.ThreadCreate)
 	/*
-		api.ForumGetOneHandler = operations.ForumGetOneHandlerFunc(func(params operations.ForumGetOneParams) middleware.Responder {
-			return middleware.NotImplemented("operation .ForumGetOne has not yet been implemented")
-		})
 		api.ForumGetThreadsHandler = operations.ForumGetThreadsHandlerFunc(func(params operations.ForumGetThreadsParams) middleware.Responder {
 			return middleware.NotImplemented("operation .ForumGetThreads has not yet been implemented")
 		})

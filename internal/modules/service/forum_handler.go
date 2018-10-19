@@ -10,4 +10,6 @@ type ForumHandler interface {
 	UserCreate(operations.UserCreateParams) middleware.Responder
 	UserGetOne(operations.UserGetOneParams) middleware.Responder
 	UserUpdate(operations.UserUpdateParams) middleware.Responder
+	ForumGetOne(operations.ForumGetOneParams) middleware.Responder
+	ThreadCreate(operations.ThreadCreateParams) middleware.Responder
 }

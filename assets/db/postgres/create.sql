@@ -14,15 +14,14 @@ CREATE TABLE "user" (
 );
 
 CREATE TABLE forum (
-  id          BIGSERIAL PRIMARY KEY,
   user_nick   citext references "user",
-  slug        text not null,
+  slug        citext PRIMARY KEY,
   title       text not null
 );
 
 CREATE TABLE thread (
   id BIGSERIAL PRIMARY KEY,
-  forum_id integer references forum,
+  forum_slug citext references forum,
   user_nick citext references "user",
   created timestamp,
   slug text not null,
