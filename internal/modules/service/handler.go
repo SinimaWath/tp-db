@@ -8,9 +8,11 @@ import (
 )
 
 var (
-	errNotFound       = errors.New("Not found")
-	errInternalServer = errors.New("Internal server error")
-	errEmptySelect    = errors.New("Empty select")
+	errNotFound            = errors.New("Not found")
+	errInternalServer      = errors.New("Internal server error")
+	errEmptySelect         = errors.New("Empty select")
+	errUniqueViolation     = errors.New("Unique Violation")
+	errForeignKeyViolation = errors.New("Foreign Key Violation")
 )
 
 type ForumHandler interface {
@@ -21,4 +23,5 @@ type ForumHandler interface {
 	ForumGetOne(operations.ForumGetOneParams) middleware.Responder
 	ThreadCreate(operations.ThreadCreateParams) middleware.Responder
 	ForumGetThreads(operations.ForumGetThreadsParams) middleware.Responder
+	Clear(operations.ClearParams) middleware.Responder
 }

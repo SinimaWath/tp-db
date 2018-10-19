@@ -91,7 +91,11 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 	args := []interface{}{slug}
 	placeholder := 2
 	if since != "" {
-		query += fmt.Sprintf(" AND t.created >= $%v", placeholder)
+		if desc {
+			query += fmt.Sprintf(" AND t.created <= $%v", placeholder)
+		} else {
+			query += fmt.Sprintf(" AND t.created >= $%v", placeholder)
+		}
 		placeholder++
 		args = append(args, since)
 	}
