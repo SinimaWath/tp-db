@@ -6,12 +6,14 @@ CMD_PATH = ./internal/cmd/forum-server
 EXE_NAME = forum-server
 
 run:
-	$(EXE_NAME) --scheme=http --port=5001 --host=0.0.0.0
+	$(EXE_NAME) --scheme=http --port=5001 --host=0.0.0.0 --database=postgres://postgres:admin@localhost/forum?sslmode=disable
 install:
 	go install $(CMD_PATH)
 
 generate:
 	go generate -x $(GENERATE_PATH)
+
+
 
 start: build install
 
@@ -29,9 +31,10 @@ download-generators:
 	mkdir -p vendor/github.com/jteeuwen/go-bindata/
 	git clone https://github.com/jteeuwen/go-bindata vendor/github.com/jteeuwen/go-bindata/
 
-docker-start: download-generators
+docker-start:
 	docker build -t tp-db -f deploy/Dockerfile.golang .
 	./deploy/runDocker.sh
+
 
 docker-stop:
 	./deploy/stopDocker.sh

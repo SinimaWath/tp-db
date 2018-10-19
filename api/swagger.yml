@@ -636,7 +636,7 @@ definitions:
         example: This is the day you will always remember as the day that you almost caught Captain Jack Sparrow!
       email:
         type: string
-        format: email
+        format: text
         description: Почтовый адрес пользователя (уникальное поле).
         example: captaina@blackpearl.sea
         x-isnullable: false
@@ -663,7 +663,7 @@ definitions:
         example: This is the day you will always remember as the day that you almost caught Captain Jack Sparrow!
       email:
         type: string
-        format: email
+        format: text
         description: Почтовый адрес пользователя (уникальное поле).
         example: captaina@blackpearl.sea
   Forum:
