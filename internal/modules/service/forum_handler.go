@@ -12,4 +12,5 @@ type ForumHandler interface {
 	UserUpdate(operations.UserUpdateParams) middleware.Responder
 	ForumGetOne(operations.ForumGetOneParams) middleware.Responder
 	ThreadCreate(operations.ThreadCreateParams) middleware.Responder
+	ForumGetThreads(operations.ForumGetThreadsParams) middleware.Responder
 }
