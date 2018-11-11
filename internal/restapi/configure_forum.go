@@ -4,25 +4,24 @@ package restapi
 
 import (
 	"crypto/tls"
+	"log"
 	"net/http"
 	"strings"
 
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	errors "github.com/go-openapi/errors"
 	runtime "github.com/go-openapi/runtime"
-	middleware "github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/swag"
 
 	"github.com/SinimaWath/tp-db/internal/modules/assets/assets_ui"
+	"github.com/SinimaWath/tp-db/internal/modules/service"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
 )
 
 //go:generate swagger generate server --target .. --name Forum --spec ../../api/swagger.yml
-//go:generate go-bindata -pkg assets_ui -o ../modules/assets/assets_ui/assets_ui.go -prefix ../../api/swagger-ui/ ../../api/swagger-ui/...
-//go:generate go-bindata -pkg assets_db -o ../modules/assets/assets_db/assets_db.go -prefix ../../assets/ ../../assets/...
 
 type DatabaseFlags struct {
-	Database string `long:"database" description:"database connection parameters" default:"sqlite3:tech-db-hello.db"`
+	Database string `long:"database" description:"database connection parameters" default:""`
 }
 
 var dbFlags DatabaseFlags
@@ -49,58 +48,29 @@ func configureAPI(api *operations.ForumAPI) http.Handler {
 
 	api.JSONProducer = runtime.JSONProducer()
 
-	api.ClearHandler = operations.ClearHandlerFunc(func(params operations.ClearParams) middleware.Responder {
-		return middleware.NotImplemented("operation .Clear has not yet been implemented")
-	})
-	api.ForumCreateHandler = operations.ForumCreateHandlerFunc(func(params operations.ForumCreateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ForumCreate has not yet been implemented")
-	})
-	api.ForumGetOneHandler = operations.ForumGetOneHandlerFunc(func(params operations.ForumGetOneParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ForumGetOne has not yet been implemented")
-	})
-	api.ForumGetThreadsHandler = operations.ForumGetThreadsHandlerFunc(func(params operations.ForumGetThreadsParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ForumGetThreads has not yet been implemented")
-	})
-	api.ForumGetUsersHandler = operations.ForumGetUsersHandlerFunc(func(params operations.ForumGetUsersParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ForumGetUsers has not yet been implemented")
-	})
-	api.PostGetOneHandler = operations.PostGetOneHandlerFunc(func(params operations.PostGetOneParams) middleware.Responder {
-		return middleware.NotImplemented("operation .PostGetOne has not yet been implemented")
-	})
-	api.PostUpdateHandler = operations.PostUpdateHandlerFunc(func(params operations.PostUpdateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .PostUpdate has not yet been implemented")
-	})
-	api.PostsCreateHandler = operations.PostsCreateHandlerFunc(func(params operations.PostsCreateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .PostsCreate has not yet been implemented")
-	})
-	api.StatusHandler = operations.StatusHandlerFunc(func(params operations.StatusParams) middleware.Responder {
-		return middleware.NotImplemented("operation .Status has not yet been implemented")
-	})
-	api.ThreadCreateHandler = operations.ThreadCreateHandlerFunc(func(params operations.ThreadCreateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ThreadCreate has not yet been implemented")
-	})
-	api.ThreadGetOneHandler = operations.ThreadGetOneHandlerFunc(func(params operations.ThreadGetOneParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ThreadGetOne has not yet been implemented")
-	})
-	api.ThreadGetPostsHandler = operations.ThreadGetPostsHandlerFunc(func(params operations.ThreadGetPostsParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ThreadGetPosts has not yet been implemented")
-	})
-	api.ThreadUpdateHandler = operations.ThreadUpdateHandlerFunc(func(params operations.ThreadUpdateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ThreadUpdate has not yet been implemented")
-	})
-	api.ThreadVoteHandler = operations.ThreadVoteHandlerFunc(func(params operations.ThreadVoteParams) middleware.Responder {
-		return middleware.NotImplemented("operation .ThreadVote has not yet been implemented")
-	})
-	api.UserCreateHandler = operations.UserCreateHandlerFunc(func(params operations.UserCreateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .UserCreate has not yet been implemented")
-	})
-	api.UserGetOneHandler = operations.UserGetOneHandlerFunc(func(params operations.UserGetOneParams) middleware.Responder {
-		return middleware.NotImplemented("operation .UserGetOne has not yet been implemented")
-	})
-	api.UserUpdateHandler = operations.UserUpdateHandlerFunc(func(params operations.UserUpdateParams) middleware.Responder {
-		return middleware.NotImplemented("operation .UserUpdate has not yet been implemented")
-	})
+	log.Printf("configure Api")
 
+	var handler service.ForumHandler = service.NewForumPgsql(dbFlags.Database)
+	api.ClearHandler = operations.ClearHandlerFunc(handler.Clear)
+	api.ForumCreateHandler = operations.ForumCreateHandlerFunc(handler.ForumCreate)
+	api.UserCreateHandler = operations.UserCreateHandlerFunc(handler.UserCreate)
+	api.UserGetOneHandler = operations.UserGetOneHandlerFunc(handler.UserGetOne)
+	api.UserUpdateHandler = operations.UserUpdateHandlerFunc(handler.UserUpdate)
+
+	api.ForumGetOneHandler = operations.ForumGetOneHandlerFunc(handler.ForumGetOne)
+	api.ForumGetThreadsHandler = operations.ForumGetThreadsHandlerFunc(handler.ForumGetThreads)
+	api.ForumGetUsersHandler = operations.ForumGetUsersHandlerFunc(handler.ForumGetUsers)
+
+	api.ThreadCreateHandler = operations.ThreadCreateHandlerFunc(handler.ThreadCreate)
+	api.ThreadGetOneHandler = operations.ThreadGetOneHandlerFunc(handler.ThreadGetOne)
+	api.ThreadUpdateHandler = operations.ThreadUpdateHandlerFunc(handler.ThreadUpdate)
+	api.ThreadVoteHandler = operations.ThreadVoteHandlerFunc(handler.ThreadVote)
+
+	api.PostsCreateHandler = operations.PostsCreateHandlerFunc(handler.PostsCreate)
+	api.PostGetOneHandler = operations.PostGetOneHandlerFunc(handler.PostGetOne)
+	api.PostUpdateHandler = operations.PostUpdateHandlerFunc(handler.PostUpdate)
+	api.ThreadGetPostsHandler = operations.ThreadGetPostsHandlerFunc(handler.ThreadGetPosts)
+	api.StatusHandler = operations.StatusHandlerFunc(handler.Status)
 	api.ServerShutdown = func() {}
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
