@@ -36,7 +36,7 @@ func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware
 
 func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware.Responder {
 	forum := &models.Forum{}
-	err := selectForum(pg.db, params.Slug, forum)
+	err := selectForumWithThreadsAndPosts(pg.db, params.Slug, forum)
 	switch err {
 	case errNotFound:
 		responseError := models.Error{"Can't find user"}
@@ -80,6 +80,27 @@ func selectForum(db *sql.DB, slug string, forum *models.Forum) error {
 	row := db.QueryRow(querySelect, slug)
 
 	if err := row.Scan(&forum.User, &forum.Slug, &forum.Title); err != nil {
+		if err == sql.ErrNoRows {
+			return errNotFound
+		}
+		return err
+	}
+
+	return nil
+}
+
+const queryForumWithThreadsAndPosts = `SELECT u.nickname, f.slug, f.title,
+ (select count(*) from thread t
+ join post p on t.id = p.thread_id 
+ where t.forum_slug = $1),
+ (select count(*) from thread t 
+ where t.forum_slug = $2)
+FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $3`
+
+func selectForumWithThreadsAndPosts(db *sql.DB, slug string, forum *models.Forum) error {
+	row := db.QueryRow(queryForumWithThreadsAndPosts, slug, slug, slug)
+
+	if err := row.Scan(&forum.User, &forum.Slug, &forum.Title, &forum.Posts, &forum.Threads); err != nil {
 		if err == sql.ErrNoRows {
 			return errNotFound
 		}
