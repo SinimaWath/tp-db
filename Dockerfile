@@ -30,7 +30,7 @@ RUN go get -u github.com/golang/dep/cmd/dep
 WORKDIR $GOPATH/src/github.com/SinimaWath/tp-db/
 ADD . $GOPATH/src/github.com/SinimaWath/tp-db/
 
-RUN go install ./vendor/github.com/go-swagger/go-swagger/cmd/swagger
+RUN go install ./go-swagger/cmd/swagger
 
 RUN make generate
 RUN make install
