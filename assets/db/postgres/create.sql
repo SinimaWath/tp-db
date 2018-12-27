@@ -22,7 +22,7 @@ CREATE TABLE forum (
 
 CREATE TABLE thread (
   id BIGSERIAL PRIMARY KEY,
-  slug citext unique not null ,
+  slug citext unique ,
   forum_slug citext references forum,
   user_nick citext references "user",
   created timestamp with time zone default now(),
@@ -50,6 +50,11 @@ CREATE TABLE post (
   thread_id integer references thread NOT NULL
 );
 
+CREATE INDEX idx_nick_email ON "user" (nickname, email);
+CREATE INDEX idx_forum_slug ON forum (slug);
+CREATE INDEX idx_thread_id_slug ON thread(id, slug);
+CREATE INDEX idx_vote ON vote(thread_id, voice);
+
 CREATE OR REPLACE FUNCTION change_edited_post() RETURNS trigger as $change_edited_post$
 BEGIN
   IF NEW.message <> OLD.message THEN
@@ -68,11 +73,11 @@ CREATE TRIGGER change_edited_post BEFORE UPDATE ON post
 CREATE OR REPLACE FUNCTION create_path() RETURNS trigger as $create_path$
 BEGIN
    IF NEW.parent_id IS NULL THEN
-     NEW.path := (ARRAY [(SELECT COUNT(*) + 1 from post p where p.parent_id is null and p.thread_id = NEW.thread_id )]);
+     NEW.path := (ARRAY [NEW.id]);
      return NEW;
    end if;
 
-   NEW.path := (SELECT array_append(p.path, (SELECT COUNT(*)::INTEGER + 1 from post p1 where p1.parent_id = NEW.parent_id and p1.thread_id = NEW.thread_id))
+   NEW.path := (SELECT array_append(p.path, NEW.id::integer)
                 from post p where p.id = NEW.parent_id);
   RETURN NEW;
 END;

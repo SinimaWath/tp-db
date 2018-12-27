@@ -251,7 +251,7 @@ func (f ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Re
 			}
 		case "thread":
 			post.Thread = &models.Thread{}
-			err = selectThreadID(f.db, int(post.Post.Thread), post.Thread)
+			err = selectThread(f.db, strconv.Itoa(int(post.Post.Thread)), true, post.Thread)
 			if err != nil {
 				log.Println(err)
 				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})

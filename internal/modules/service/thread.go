@@ -13,20 +13,31 @@ import (
 	pq "github.com/lib/pq"
 )
 
+const (
+	queryInsertThread = `INSERT INTO thread (slug, user_nick, created, forum_slug, title, message) 
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+
+	querySelectThreadByID = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id FROM thread t
+JOIN forum f ON f.slug = t.forum_slug WHERE t.id = $1`
+	querySelectThreadBySlug = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id FROM thread t
+JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
+
+	querySelectThreadWithVotesByID = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id, t.votes FROM thread t
+	JOIN forum f ON f.slug = t.forum_slug WHERE t.id = $1`
+	querySelectThreadWithVotesBySlug = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id, t.votes FROM thread t
+	JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
+
+	querySelectThreadIDBySlug = `SELECT t.id from thread t where t.slug = $1`
+)
+
 func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middleware.Responder {
-	slug := params.Slug
-	if params.Slug != params.Thread.Slug && params.Thread.Slug != "" {
-		slug = params.Thread.Slug
-	}
-
-	err := insertThread(pg.db, slug, params.Thread.Author, params.Thread.Title, params.Thread.Message,
+	id, err := insertThread(pg.db, params.Thread.Slug, params.Thread.Author, params.Thread.Title, params.Thread.Message,
 		params.Thread.Forum, params.Thread.Created)
-
 	if err, ok := err.(*pq.Error); ok && err != nil {
 
 		if err.Code == pgErrCodeUniqueViolation {
 			thread := &models.Thread{}
-			if err := selectThread(pg.db, slug, false, thread); err != nil {
+			if err := selectThread(pg.db, params.Thread.Slug, false, thread); err != nil {
 				log.Println(err)
 				return nil
 			}
@@ -43,45 +54,50 @@ func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middlewa
 	}
 
 	thread := &models.Thread{}
-	if err := selectThread(pg.db, slug, false, thread); err != nil {
+	if err := selectThread(pg.db, strconv.Itoa(id), true, thread); err != nil {
 		log.Println(err)
 		return nil
-	}
-
-	if params.Thread.Slug == "" {
-		thread.Slug = ""
 	}
 	// !!! Для тестов
 	return operations.NewThreadCreateCreated().WithPayload(thread)
 }
 
-func insertThread(db *sql.DB, slug, author, title, message, forum string, created *strfmt.DateTime) error {
-	queryInsert := `INSERT INTO thread (slug, user_nick, created, forum_slug, title, message) 
-	VALUES ($1, $2, $3, $4, $5, $6)`
+func insertThread(db *sql.DB, slug, author, title, message, forum string, created *strfmt.DateTime) (int, error) {
 
-	_, err := db.Exec(queryInsert, slug, author, created,
-		forum, title, message)
-
-	if err != nil {
-		return err
+	nullableSlug := sql.NullString{}
+	fmt.Println("Slug: ", slug)
+	if slug == "" {
+		nullableSlug.Valid = false
+	} else {
+		nullableSlug.String = slug
+		nullableSlug.Valid = true
 	}
 
-	return nil
+	row := db.QueryRow(queryInsertThread, nullableSlug, author, created,
+		forum, title, message)
+
+	var id int
+
+	err := row.Scan(&id)
+	fmt.Println("Scanned id: ", id)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
 func selectThread(db *sql.DB, slugOrID string, isID bool, thread *models.Thread) error {
-	querySelect := `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id FROM thread t
-	JOIN forum f ON f.slug = t.forum_slug `
-
+	var row *sql.Row
 	if isID {
-		querySelect += `WHERE t.id = $1`
+		row = db.QueryRow(querySelectThreadByID, slugOrID)
 	} else {
-		querySelect += `WHERE t.slug = $1`
+		row = db.QueryRow(querySelectThreadBySlug, slugOrID)
 	}
 
-	row := db.QueryRow(querySelect, slugOrID)
-	// thread.ID = 42
-	if err := row.Scan(&thread.Forum, &thread.Author, &thread.Created, &thread.Slug,
+	nullableSlug := sql.NullString{}
+
+	if err := row.Scan(&thread.Forum, &thread.Author, &thread.Created, &nullableSlug,
 		&thread.Title, &thread.Message, &thread.ID); err != nil {
 		if err == sql.ErrNoRows {
 			return errNotFound
@@ -89,22 +105,26 @@ func selectThread(db *sql.DB, slugOrID string, isID bool, thread *models.Thread)
 		return err
 	}
 
+	if nullableSlug.Valid {
+		thread.Slug = nullableSlug.String
+	} else {
+		thread.Slug = ""
+	}
+
 	return nil
 }
 
 func selectThreadVotes(db *sql.DB, slugOrID string, isID bool, thread *models.Thread) error {
-	querySelect := `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id, t.votes FROM thread t
-	JOIN forum f ON f.slug = t.forum_slug `
-
+	var row *sql.Row
 	if isID {
-		querySelect += `WHERE t.id = $1`
+		row = db.QueryRow(querySelectThreadWithVotesByID, slugOrID)
 	} else {
-		querySelect += `WHERE t.slug = $1`
+		row = db.QueryRow(querySelectThreadWithVotesBySlug, slugOrID)
 	}
 
-	row := db.QueryRow(querySelect, slugOrID)
-	// thread.ID = 42
-	if err := row.Scan(&thread.Forum, &thread.Author, &thread.Created, &thread.Slug,
+	nullableSlug := sql.NullString{}
+
+	if err := row.Scan(&thread.Forum, &thread.Author, &thread.Created, &nullableSlug,
 		&thread.Title, &thread.Message, &thread.ID, &thread.Votes); err != nil {
 		if err == sql.ErrNoRows {
 			return errNotFound
@@ -112,26 +132,21 @@ func selectThreadVotes(db *sql.DB, slugOrID string, isID bool, thread *models.Th
 		return err
 	}
 
-	return nil
-}
-
-func selectThreadID(db *sql.DB, id int, thread *models.Thread) error {
-	querySelect := `SELECT t.id, f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id FROM thread t
-	JOIN forum f ON f.slug = t.forum_slug
-	WHERE t.id = $1`
-	row := db.QueryRow(querySelect, id)
-	// thread.ID = 42
-	if err := row.Scan(&thread.ID, &thread.Forum, &thread.Author, &thread.Created, &thread.Slug,
-		&thread.Title, &thread.Message, &thread.ID); err != nil {
-		if err == sql.ErrNoRows {
-			return errNotFound
-		}
-		return err
+	if nullableSlug.Valid {
+		thread.Slug = nullableSlug.String
+	} else {
+		thread.Slug = ""
 	}
 
 	return nil
 }
 
+func selectThreadIDBySlug(db *sql.Tx, slug string) (int, error) {
+	id := -1
+	row := db.QueryRow(querySelectThreadIDBySlug, slug)
+	err := row.Scan(&id)
+	return id, err
+}
 func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads *models.Threads) error {
 	query := `SELECT t.id, f.slug, u.nickname, t.created as created, t.slug, t.title, t.message FROM thread t
 	JOIN forum f ON f.slug = t.forum_slug
@@ -161,7 +176,6 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 		args = append(args, limit)
 	}
 
-	// log.Printf("%v, args: %#v\n", query, args)
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return err
@@ -170,10 +184,17 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 	defer rows.Close()
 	for rows.Next() {
 		thread := &models.Thread{}
-		err := rows.Scan(&thread.ID, &thread.Forum, &thread.Author, &thread.Created, &thread.Slug, &thread.Title, &thread.Message)
+		nullableSlug := sql.NullString{}
+		err := rows.Scan(&thread.ID, &thread.Forum, &thread.Author, &thread.Created, &nullableSlug, &thread.Title, &thread.Message)
 		if err != nil {
 			log.Println(err)
 		}
+		if nullableSlug.Valid {
+			thread.Slug = nullableSlug.String
+		} else {
+			thread.Slug = ""
+		}
+
 		*threads = append(*threads, thread)
 	}
 

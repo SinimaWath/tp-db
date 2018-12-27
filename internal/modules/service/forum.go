@@ -11,6 +11,12 @@ import (
 	pq "github.com/lib/pq"
 )
 
+const (
+	queryInsertForum      = `INSERT INTO forum (user_nick, slug, title) VALUES ($1, $2, $3)`
+	queryCheckForumExists = `SELECT EXISTS(SELECT 1 FROM forum where slug = $1)`
+	querySelectForum      = `SELECT u.nickname, f.slug, f.title FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $1`
+)
+
 func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware.Responder {
 	err := insertForum(pg.db, params.Forum.User, params.Forum.Slug, params.Forum.Title)
 
@@ -50,8 +56,7 @@ func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware
 }
 
 func insertForum(db *sql.DB, user, slug, title string) error {
-	queryInsert := `INSERT INTO forum (user_nick, slug, title) VALUES ($1, $2, $3)`
-	_, err := db.Exec(queryInsert, user, slug, title)
+	_, err := db.Exec(queryInsertForum, user, slug, title)
 	if err, ok := err.(*pq.Error); ok && err != nil {
 		if err.Code == pgErrCodeUniqueViolation {
 			return errUniqueViolation
@@ -67,17 +72,14 @@ func insertForum(db *sql.DB, user, slug, title string) error {
 }
 
 func checkForumExist(db *sql.DB, slug string) bool {
-	querySelect := `SELECT EXISTS(SELECT 1 FROM forum where slug = $1)`
-	row := db.QueryRow(querySelect, slug)
+	row := db.QueryRow(queryCheckForumExists, slug)
 	isExist := false
 	row.Scan(&isExist)
 	return isExist
 }
 
 func selectForum(db *sql.DB, slug string, forum *models.Forum) error {
-	querySelect := `SELECT u.nickname, f.slug, f.title FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $1`
-
-	row := db.QueryRow(querySelect, slug)
+	row := db.QueryRow(querySelectForum, slug)
 
 	if err := row.Scan(&forum.User, &forum.Slug, &forum.Title); err != nil {
 		if err == sql.ErrNoRows {
