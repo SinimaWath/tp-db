@@ -17,7 +17,9 @@ CREATE TABLE "user" (
 CREATE TABLE forum (
   user_nick   citext references "user",
   slug        citext PRIMARY KEY,
-  title       text not null
+  title       text not null,
+  thread_count integer default 0 not null,
+  post_count integer default 0 not null
 );
 
 CREATE TABLE thread (
@@ -47,6 +49,7 @@ CREATE TABLE post (
   edited boolean,
   message text,
   parent_id integer references post (id),
+  forum_slug citext,
   thread_id integer references thread NOT NULL
 );
 

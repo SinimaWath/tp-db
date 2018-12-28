@@ -2,7 +2,6 @@ package service
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -21,8 +20,7 @@ func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware
 	err := insertForum(pg.db, params.Forum.User, params.Forum.Slug, params.Forum.Title)
 
 	if err == errForeignKeyViolation {
-		responseError := models.Error{Message: fmt.Sprintf("Can't find user with nickname: %v", params.Forum.User)}
-		return operations.NewForumCreateNotFound().WithPayload(&responseError)
+		return operations.NewForumCreateNotFound().WithPayload(&models.Error{})
 	} else if err == errUniqueViolation {
 		forum := &models.Forum{}
 		if err := selectForum(pg.db, params.Forum.Slug, forum); err != nil {
@@ -45,8 +43,7 @@ func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware
 	err := selectForumWithThreadsAndPosts(pg.db, params.Slug, forum)
 	switch err {
 	case errNotFound:
-		responseError := models.Error{"Can't find user"}
-		return operations.NewForumGetOneNotFound().WithPayload(&responseError)
+		return operations.NewForumGetOneNotFound().WithPayload(&models.Error{})
 	case nil:
 		return operations.NewForumGetOneOK().WithPayload(forum)
 	default:

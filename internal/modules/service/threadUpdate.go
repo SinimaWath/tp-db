@@ -84,10 +84,8 @@ func (pg ForumPgsql) ThreadUpdate(params operations.ThreadUpdateParams) middlewa
 		})
 	}
 
-	if id, err := strconv.Atoi(params.SlugOrID); err != nil {
+	if _, err := strconv.Atoi(params.SlugOrID); err != nil {
 		queryUpdate, args = formThreadUpdateQuery(params.Thread.Message, params.Thread.Title, params.SlugOrID, false)
-	} else if id == 42 {
-		queryUpdate, args = formThreadUpdateQueryLast(params.Thread.Message, params.Thread.Title)
 	} else {
 		queryUpdate, args = formThreadUpdateQuery(params.Thread.Message, params.Thread.Title, params.SlugOrID, true)
 	}
@@ -104,8 +102,7 @@ func (pg ForumPgsql) ThreadUpdate(params operations.ThreadUpdateParams) middlewa
 		log.Println(err)
 		return nil
 	} else if rowsAffected == 0 {
-		responseError := &models.Error{"Can't find thread"}
-		return operations.NewThreadUpdateNotFound().WithPayload(responseError)
+		return operations.NewThreadUpdateNotFound().WithPayload(&models.Error{})
 	}
 
 	return pg.ThreadGetOne(operations.ThreadGetOneParams{

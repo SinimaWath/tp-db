@@ -73,7 +73,7 @@ WHERE f.slug = t.forum_slug and t.id = $2
 `
 
 const postInsertQuery = `
-	INSERT INTO post (author, created, message, edited, parent_id, thread_id)
+	INSERT INTO post (forum_slug, author, created, message, edited, parent_id, thread_id)
 	VALUES 
 `
 
@@ -87,7 +87,11 @@ func formInsertValues(author, created, message, slugOrID string, isID bool, isEd
 	values := "("
 	valuesArr := []string{}
 	placeholder := placeholderStart
-
+	if isID {
+		valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.id = %v)`, slugOrID))
+	} else {
+		valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.slug = '%v')`, slugOrID))
+	}
 	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
 	placeholder++
 
@@ -156,13 +160,7 @@ func postsInsert(db *sql.Tx, posts models.Posts, slugOrID string, isID bool) (*m
 	insertedPosts := &models.Posts{}
 
 	if len(posts) == 0 {
-		var err error
-		if isID {
-			_, err = db.Exec(postInsertEmptyToFindForeignKeyViolationsID, slugOrID)
-		} else {
-			_, err = db.Exec(postInsertEmptyToFindForeignKeyViolationsSlug, slugOrID)
-		}
-		return insertedPosts, err
+		return insertedPosts, nil
 	}
 
 	for idx, post := range posts {

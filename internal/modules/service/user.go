@@ -46,8 +46,7 @@ func (pg ForumPgsql) UserGetOne(params operations.UserGetOneParams) middleware.R
 	err := selectUser(pg.db, user, params.Nickname)
 	switch err {
 	case errNotFound:
-		responseError := models.Error{"Can't find user"}
-		return operations.NewUserGetOneNotFound().WithPayload(&responseError)
+		return operations.NewUserGetOneNotFound().WithPayload(&models.Error{})
 	case nil:
 		return operations.NewUserGetOneOK().WithPayload(user)
 	default:
@@ -155,7 +154,6 @@ func (pg ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middle
 	}
 
 	query, args := formForumGetUsersQuery(params.Slug, params.Since, params.Limit, params.Desc)
-	log.Println("Result query: ", query)
 	rows, err := pg.db.Query(query, args...)
 	if err != nil {
 		log.Println(err)

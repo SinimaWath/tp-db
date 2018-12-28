@@ -250,8 +250,7 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 	err := selectThreads(pg.db, params.Slug, since, limit, desc, threads)
 
 	if len(*threads) == 0 && !checkForumExist(pg.db, params.Slug) {
-		responseError := models.Error{Message: fmt.Sprintf("Can't find forum by slug: %v", params.Slug)}
-		return operations.NewForumGetThreadsNotFound().WithPayload(&responseError)
+		return operations.NewForumGetThreadsNotFound().WithPayload(&models.Error{})
 	} else if err != nil {
 		return nil
 	}
