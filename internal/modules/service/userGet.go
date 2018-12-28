@@ -57,7 +57,7 @@ func formForumGetUsersQuery(slug string, since *string, limit *int32, desc *bool
 
 func (pg ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middleware.Responder {
 	log.Println("ForumGetUsers")
-	if !checkForumExist(pg.db, params.Slug) {
+	if !pg.checkForumExist(params.Slug) {
 		return operations.NewForumGetUsersNotFound().WithPayload(&models.Error{})
 	}
 

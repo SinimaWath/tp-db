@@ -133,23 +133,6 @@ const queryCheckThreadExistSlug = `
 	SELECT true, id FROM thread where slug = $1
 `
 
-func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
-	exist := sql.NullBool{}
-	id := ""
-	if isID {
-		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
-		id = slugOrId
-	} else {
-		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
-	}
-
-	if exist.Valid {
-		return true, id
-	}
-
-	return false, ""
-}
-
 func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
 	log.Println("ThreadGetPosts")
 	isID := false

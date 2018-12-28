@@ -250,7 +250,7 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 	}
 	err := selectThreads(pg.db, params.Slug, since, limit, desc, threads)
 
-	if len(*threads) == 0 && !checkForumExist(pg.db, params.Slug) {
+	if len(*threads) == 0 && !pg.checkForumExist(params.Slug) {
 		return operations.NewForumGetThreadsNotFound().WithPayload(&models.Error{})
 	} else if err != nil {
 		return nil
@@ -278,4 +278,21 @@ func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middlewa
 		log.Println(selectErr)
 		return nil
 	}
+}
+
+func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
+	exist := sql.NullBool{}
+	id := ""
+	if isID {
+		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
+		id = slugOrId
+	} else {
+		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
+	}
+
+	if exist.Valid {
+		return true, id
+	}
+
+	return false, ""
 }
