@@ -34,13 +34,24 @@ JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
 	JOIN forum f ON f.slug = t.forum_slug
 	JOIN "user" u ON u.nickname = t.user_nick
 	WHERE f.slug = $1`
+
+	queryUpdateForumThreadCount = `
+	UPDATE forum f SET thread_count = thread_count + 1
+	WHERE f.slug = $1
+	`
 )
 
 func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middleware.Responder {
-	id, err := insertThread(pg.db, params.Thread.Slug, params.Thread.Author, params.Thread.Title, params.Thread.Message,
+	tx, err := pg.db.Begin()
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	id, err := insertThread(tx, params.Thread.Slug, params.Thread.Author, params.Thread.Title, params.Thread.Message,
 		params.Thread.Forum, params.Thread.Created)
-	if err, ok := err.(*pq.Error); ok && err != nil {
 
+	if err, ok := err.(*pq.Error); ok && err != nil {
+		tx.Rollback()
 		if err.Code == pgErrCodeUniqueViolation {
 			thread := &models.Thread{}
 			if err := selectThread(pg.db, params.Thread.Slug, false, thread); err != nil {
@@ -59,6 +70,18 @@ func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middlewa
 		return nil
 	}
 
+	_, err = tx.Exec(queryUpdateForumThreadCount, params.Thread.Forum)
+
+	if err != nil {
+		log.Println(err)
+		tx.Rollback()
+		return nil
+	}
+	if tx.Commit() != nil {
+		log.Println(err)
+		return nil
+	}
+
 	thread := &models.Thread{}
 	if err := selectThread(pg.db, strconv.Itoa(id), true, thread); err != nil {
 		log.Println(err)
@@ -68,7 +91,7 @@ func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middlewa
 	return operations.NewThreadCreateCreated().WithPayload(thread)
 }
 
-func insertThread(db *sql.DB, slug, author, title, message, forum string, created *strfmt.DateTime) (int, error) {
+func insertThread(db *sql.Tx, slug, author, title, message, forum string, created *strfmt.DateTime) (int, error) {
 
 	nullableSlug := sql.NullString{}
 
@@ -211,6 +234,7 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 }
 
 func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) middleware.Responder {
+	log.Println("ForumGetThreads")
 	threads := &models.Threads{}
 	limit := -1
 	if params.Limit != nil {
@@ -226,9 +250,8 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 	}
 	err := selectThreads(pg.db, params.Slug, since, limit, desc, threads)
 
-	if len(*threads) == 0 && !checkForumExist(pg.db, params.Slug) {
-		responseError := models.Error{Message: fmt.Sprintf("Can't find forum by slug: %v", params.Slug)}
-		return operations.NewForumGetThreadsNotFound().WithPayload(&responseError)
+	if len(*threads) == 0 && !pg.checkForumExist(params.Slug) {
+		return operations.NewForumGetThreadsNotFound().WithPayload(&models.Error{})
 	} else if err != nil {
 		return nil
 	}
@@ -236,6 +259,7 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 }
 
 func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middleware.Responder {
+	log.Println("ThreadGetOne")
 	thread := &models.Thread{}
 	var selectErr error
 
@@ -247,12 +271,28 @@ func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middlewa
 
 	switch selectErr {
 	case errNotFound:
-		responseError := &models.Error{"Can't find thread"}
-		return operations.NewThreadGetOneNotFound().WithPayload(responseError)
+		return operations.NewThreadGetOneNotFound().WithPayload(&models.Error{})
 	case nil:
 		return operations.NewThreadGetOneOK().WithPayload(thread)
 	default:
 		log.Println(selectErr)
 		return nil
 	}
+}
+
+func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
+	exist := sql.NullBool{}
+	id := ""
+	if isID {
+		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
+		id = slugOrId
+	} else {
+		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
+	}
+
+	if exist.Valid {
+		return true, id
+	}
+
+	return false, ""
 }

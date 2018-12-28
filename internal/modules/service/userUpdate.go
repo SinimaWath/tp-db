@@ -44,7 +44,7 @@ func formUserUpdateQuery(email, fullname, about, nickname string) (string, []int
 }
 
 func (pg ForumPgsql) UserUpdate(params operations.UserUpdateParams) middleware.Responder {
-
+	log.Println("UserUpdate")
 	if userUpdateCheckNull(params.Profile) {
 		return pg.UserGetOne(operations.UserGetOneParams{
 			Nickname: params.Nickname,
@@ -57,8 +57,7 @@ func (pg ForumPgsql) UserUpdate(params operations.UserUpdateParams) middleware.R
 	if err, ok := err.(*pq.Error); ok && err != nil {
 		if err.Code == pgErrCodeUniqueViolation {
 			log.Println(err)
-			responseError := &models.Error{"With such profile user already exist"}
-			return operations.NewUserUpdateConflict().WithPayload(responseError)
+			return operations.NewUserUpdateConflict().WithPayload(&models.Error{})
 		}
 		log.Println(err)
 		return nil
@@ -70,8 +69,7 @@ func (pg ForumPgsql) UserUpdate(params operations.UserUpdateParams) middleware.R
 		log.Println(err)
 		return nil
 	} else if rowsAffected == 0 {
-		responseError := &models.Error{"Can't find user"}
-		return operations.NewUserUpdateNotFound().WithPayload(responseError)
+		return operations.NewUserUpdateNotFound().WithPayload(&models.Error{})
 	}
 
 	return pg.UserGetOne(operations.UserGetOneParams{

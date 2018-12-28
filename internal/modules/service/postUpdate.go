@@ -14,6 +14,7 @@ RETURNING id, author, created, edited, message, parent_id, thread_id,
 (select t.forum_slug from thread t where t.id = thread_id)`
 
 func (f ForumPgsql) PostUpdate(params operations.PostUpdateParams) middleware.Responder {
+	log.Println("PostUpdate")
 	insertedPost := &models.Post{}
 
 	if params.Post.Message == "" {

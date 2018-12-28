@@ -2,7 +2,6 @@ package service
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -21,8 +20,7 @@ func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware
 	err := insertForum(pg.db, params.Forum.User, params.Forum.Slug, params.Forum.Title)
 
 	if err == errForeignKeyViolation {
-		responseError := models.Error{Message: fmt.Sprintf("Can't find user with nickname: %v", params.Forum.User)}
-		return operations.NewForumCreateNotFound().WithPayload(&responseError)
+		return operations.NewForumCreateNotFound().WithPayload(&models.Error{})
 	} else if err == errUniqueViolation {
 		forum := &models.Forum{}
 		if err := selectForum(pg.db, params.Forum.Slug, forum); err != nil {
@@ -37,16 +35,21 @@ func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware
 		log.Println(err)
 		return nil
 	}
+
+	pg.Lock()
+	pg.forums[forum.Slug] = struct{}{}
+	pg.Unlock()
+
 	return operations.NewForumCreateCreated().WithPayload(forum)
 }
 
 func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware.Responder {
+	log.Println("ForumGetOne")
 	forum := &models.Forum{}
 	err := selectForumWithThreadsAndPosts(pg.db, params.Slug, forum)
 	switch err {
 	case errNotFound:
-		responseError := models.Error{"Can't find user"}
-		return operations.NewForumGetOneNotFound().WithPayload(&responseError)
+		return operations.NewForumGetOneNotFound().WithPayload(&models.Error{})
 	case nil:
 		return operations.NewForumGetOneOK().WithPayload(forum)
 	default:
@@ -71,8 +74,16 @@ func insertForum(db *sql.DB, user, slug, title string) error {
 	return nil
 }
 
-func checkForumExist(db *sql.DB, slug string) bool {
-	row := db.QueryRow(queryCheckForumExists, slug)
+func (pg ForumPgsql) checkForumExist(slug string) bool {
+
+	pg.RLock()
+	if _, exist := pg.forums[slug]; exist {
+		log.Println("Check forum from cache")
+		pg.RUnlock()
+		return true
+	}
+	pg.RUnlock()
+	row := pg.db.QueryRow(queryCheckForumExists, slug)
 	isExist := false
 	row.Scan(&isExist)
 	return isExist
@@ -91,16 +102,13 @@ func selectForum(db *sql.DB, slug string, forum *models.Forum) error {
 	return nil
 }
 
-const queryForumWithThreadsAndPosts = `SELECT u.nickname, f.slug, f.title,
- (select count(*) from thread t
- join post p on t.id = p.thread_id 
- where t.forum_slug = $1),
- (select count(*) from thread t 
- where t.forum_slug = $2)
-FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $3`
+const queryForumWithThreadsAndPosts = `
+SELECT u.nickname, f.slug, f.title, f.post_count, f.thread_count
+FROM forum f JOIN "user" u ON u.nickname = f.user_nick 
+WHERE f.slug = $1`
 
 func selectForumWithThreadsAndPosts(db *sql.DB, slug string, forum *models.Forum) error {
-	row := db.QueryRow(queryForumWithThreadsAndPosts, slug, slug, slug)
+	row := db.QueryRow(queryForumWithThreadsAndPosts, slug)
 
 	if err := row.Scan(&forum.User, &forum.Slug, &forum.Title, &forum.Posts, &forum.Threads); err != nil {
 		if err == sql.ErrNoRows {

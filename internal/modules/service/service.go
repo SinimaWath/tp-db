@@ -10,6 +10,7 @@ import (
 )
 
 func (pg ForumPgsql) Clear(operations.ClearParams) middleware.Responder {
+	log.Println("Clear")
 	err := clear(pg.db)
 	if err != nil {
 		log.Println(err)
@@ -28,7 +29,7 @@ SELECT COUNT(*) FROM "user"
 `
 
 func (f *ForumPgsql) Status(params operations.StatusParams) middleware.Responder {
-
+	log.Println("Status")
 	rows, err := f.db.Query(queryStatus)
 	if err != nil {
 		log.Println(err)

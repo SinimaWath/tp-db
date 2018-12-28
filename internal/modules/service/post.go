@@ -14,16 +14,30 @@ import (
 )
 
 func (pg ForumPgsql) PostsCreate(params operations.PostsCreateParams) middleware.Responder {
+	isID := false
+	if _, err := strconv.Atoi(params.SlugOrID); err == nil {
+		isID = true
+	}
+
+	exist, ID := checkThreadExistAndGetID(pg.db, params.SlugOrID, isID)
+	if !exist {
+		return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
+	}
+
+	tx, err := pg.db.Begin()
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
 	var insertErr error
 	var insertedPosts *models.Posts
-	if _, err := strconv.Atoi(params.SlugOrID); err == nil {
-		insertedPosts, insertErr = postsInsert(pg.db, params.Posts, params.SlugOrID, true)
-	} else {
-		insertedPosts, insertErr = postsInsert(pg.db, params.Posts, params.SlugOrID, false)
-	}
+
+	insertedPosts, insertErr = postsInsert(tx, params.Posts, ID, true)
 
 	if insertErr != nil {
 		log.Println(insertErr)
+		tx.Rollback()
 		if err, ok := insertErr.(*pq.Error); ok {
 			log.Printf("pqError: %#v", err)
 			if err.Code == pgErrForeignKeyViolation {
@@ -41,11 +55,25 @@ func (pg ForumPgsql) PostsCreate(params operations.PostsCreateParams) middleware
 		}
 		return nil
 	}
+
+	_, err = tx.Exec(updateForumPostCount, len(params.Posts), ID)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	tx.Commit()
 	return operations.NewPostsCreateCreated().WithPayload(*insertedPosts)
 }
 
+const updateForumPostCount = `
+UPDATE forum f SET post_count = post_count + $1
+FROM thread t
+WHERE f.slug = t.forum_slug and t.id = $2
+`
+
 const postInsertQuery = `
-	INSERT INTO post (author, created, message, edited, parent_id, thread_id)
+	INSERT INTO post (forum_slug, author, created, message, edited, parent_id, thread_id)
 	VALUES 
 `
 
@@ -59,7 +87,11 @@ func formInsertValues(author, created, message, slugOrID string, isID bool, isEd
 	values := "("
 	valuesArr := []string{}
 	placeholder := placeholderStart
-
+	if isID {
+		valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.id = %v)`, slugOrID))
+	} else {
+		valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.slug = '%v')`, slugOrID))
+	}
 	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
 	placeholder++
 
@@ -119,7 +151,7 @@ func formInsertValues(author, created, message, slugOrID string, isID bool, isEd
 	return values
 }
 
-func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*models.Posts, error) {
+func postsInsert(db *sql.Tx, posts models.Posts, slugOrID string, isID bool) (*models.Posts, error) {
 	valuesArgsById := make([]interface{}, 0, len(posts)*6)
 	valuesArgsBySlug := make([]interface{}, 0, len(posts)*5)
 
@@ -128,13 +160,7 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 	insertedPosts := &models.Posts{}
 
 	if len(posts) == 0 {
-		var err error
-		if isID {
-			_, err = db.Exec(postInsertEmptyToFindForeignKeyViolationsID, slugOrID)
-		} else {
-			_, err = db.Exec(postInsertEmptyToFindForeignKeyViolationsSlug, slugOrID)
-		}
-		return insertedPosts, err
+		return insertedPosts, nil
 	}
 
 	for idx, post := range posts {
@@ -188,7 +214,7 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 			&post.IsEdited, &post.Message, &parentId, &post.Thread, &post.Forum)
 		if err != nil {
 			log.Println(err)
-			continue
+			return nil, err
 		}
 
 		if parentId.Valid {
@@ -205,9 +231,8 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 }
 
 const querySelectPostByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug 
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug 
 	from post p
-	join thread t on p.thread_id = t.id
 	where p.id = $1
 `
 
@@ -225,11 +250,11 @@ func selectPost(db *sql.DB, id int64, post *models.Post) error {
 }
 
 func (f ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Responder {
+	log.Println("PostGetOne")
 	post := &models.PostFull{
 		Post: &models.Post{},
 	}
 	err := selectPost(f.db, params.ID, post.Post)
-	log.Printf("Select post: %v\n", *post.Post)
 	if err != nil {
 		log.Println(err)
 		return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})

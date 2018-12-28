@@ -1,6 +1,7 @@
 package service
 
 import (
+	"log"
 	"strconv"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -25,6 +26,7 @@ func voiceToBool(voice int32) bool {
 }
 
 func (pg *ForumPgsql) ThreadVote(params operations.ThreadVoteParams) middleware.Responder {
+	log.Println("ThreadVote")
 	tx, err := pg.db.Begin()
 	if err != nil {
 		return nil

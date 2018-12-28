@@ -10,213 +10,73 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 )
 
-const selectPostsFlatLimitBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1
-	ORDER BY p.created, p.id
-	LIMIT $2
-`
-
-const selectPostsFlatLimitDescBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1
-	ORDER BY p.created DESC, p.id DESC
-	LIMIT $2
-`
-
-const selectPostsFlatLimitSinceBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and p.id > $2
-	ORDER BY p.created, p.id
-	LIMIT $3
-`
-const selectPostsFlatLimitSinceDescBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and p.id < $2
-	ORDER BY p.created DESC, p.id DESC
-	LIMIT $3
-`
-
 const selectPostsFlatLimitByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1
+	WHERE p.thread_id = $1
 	ORDER BY p.created, p.id
 	LIMIT $2
 `
 
 const selectPostsFlatLimitDescByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1
+	WHERE p.thread_id = $1
 	ORDER BY p.created DESC, p.id DESC
 	LIMIT $2
 `
 
 const selectPostsFlatLimitSinceByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and p.id > $2
+	WHERE p.thread_id = $1 and p.id > $2
 	ORDER BY p.created, p.id
 	LIMIT $3
 `
 const selectPostsFlatLimitSinceDescByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and p.id < $2
+	WHERE p.thread_id = $1 and p.id < $2
 	ORDER BY p.created DESC, p.id DESC
 	LIMIT $3
 `
 
-const selectPostsTreeLimitBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1
-	ORDER BY p.path
-	LIMIT $2
-`
-
-const selectPostsTreeLimitDescBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1
-	ORDER BY path DESC
-	LIMIT $2
-`
-
-const selectPostsTreeLimitSinceBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and (p.path > (SELECT p2.path from post p2 where p2.id = $2))
-	ORDER BY p.path
-	LIMIT $3
-`
-
-const selectPostsTreeLimitSinceDescBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and (p.path < (SELECT p2.path from post p2 where p2.id = $2))
-	ORDER BY path DESC
-	LIMIT $3
-`
-
 const selectPostsTreeLimitByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1
+	WHERE p.thread_id = $1
 	ORDER BY p.path
 	LIMIT $2
 `
 
 const selectPostsTreeLimitDescByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1
+	WHERE p.thread_id = $1
 	ORDER BY path DESC
 	LIMIT $2
 `
 
 const selectPostsTreeLimitSinceByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and (p.path > (SELECT p2.path from post p2 where p2.id = $2))
+	WHERE p.thread_id = $1 and (p.path > (SELECT p2.path from post p2 where p2.id = $2))
 	ORDER BY p.path
 	LIMIT $3
 `
 
 const selectPostsTreeLimitSinceDescByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and (p.path < (SELECT p2.path from post p2 where p2.id = $2))
+	WHERE p.thread_id = $1 and (p.path < (SELECT p2.path from post p2 where p2.id = $2))
 	ORDER BY p.path DESC
 	LIMIT $3
 `
 
-const selectPostsParentTreeLimitBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and p.path[1] IN (
-		SELECT p2.path[1]
-		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.slug = $2 AND p2.parent_id IS NULL
-		ORDER BY p2.path[1]
-		LIMIT $3
-	)
-	ORDER BY path
-`
-
-const selectPostsParentTreeLimitDescBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and p.path[1] IN (
-		SELECT p2.path[1]
-		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.slug = $2 AND p2.parent_id IS NULL
-		ORDER BY p2.path[1] DESC
-		LIMIT $3 
-	)
-	ORDER BY p.path[1] DESC, p.path
-`
-
-const selectPostsParentTreeLimitSinceBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and p.path[1] IN (
-		SELECT p2.path[1]
-		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.slug = $2 AND p2.parent_id IS NULL and p2.path[1] > (SELECT p3.path[1] from post p3 where p3.id = $3)
-		ORDER BY p2.path[1]
-		LIMIT $4
-	)
-	ORDER BY p.path
-`
-
-const selectPostsParentTreeLimitSinceDescBySlug = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.slug = $1 and p.path[1] IN (
-		SELECT p2.path[1]
-		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.slug = $2 AND p2.parent_id IS NULL and p2.path[1] < (SELECT p3.path[1] from post p3 where p3.id = $3)
-		ORDER BY p2.path[1] DESC
-		LIMIT $4
-	)
-	ORDER BY p.path
-`
-
 const selectPostsParentTreeLimitByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and p.path[1] IN (
+	WHERE p.thread_id = $1 and p.path[1] IN (
 		SELECT p2.path[1]
 		FROM post p2
 		WHERE p2.thread_id = $2 AND p2.parent_id IS NULL
@@ -227,10 +87,9 @@ const selectPostsParentTreeLimitByID = `
 `
 
 const selectPostsParentTreeLimitDescByID = `
-SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 FROM post p
-JOIN thread t on t.id = p.thread_id
-WHERE t.id = $1 and p.path[1] IN (
+WHERE p.thread_id = $1 and p.path[1] IN (
     SELECT p2.path[1]
     FROM post p2
 	WHERE p2.parent_id IS NULL and p2.thread_id = $2
@@ -241,10 +100,9 @@ ORDER BY p.path[1] DESC, p.path[2:]
 `
 
 const selectPostsParentTreeLimitSinceByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and p.path[1] IN (
+	WHERE p.thread_id = $1 and p.path[1] IN (
 		SELECT p2.path[1]
 		FROM post p2
 		WHERE p2.thread_id = $2 AND p2.parent_id IS NULL and p2.path[1] > (SELECT p3.path[1] from post p3 where p3.id = $3)
@@ -255,10 +113,9 @@ const selectPostsParentTreeLimitSinceByID = `
 `
 
 const selectPostsParentTreeLimitSinceDescByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug
 	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and p.path[1] IN (
+	WHERE p.thread_id = $1 and p.path[1] IN (
 		SELECT p2.path[1]
 		FROM post p2
 		WHERE p2.thread_id = $2 AND p2.parent_id IS NULL and p2.path[1] < (SELECT p3.path[1] from post p3 where p3.id = $3)
@@ -276,24 +133,8 @@ const queryCheckThreadExistSlug = `
 	SELECT true, id FROM thread where slug = $1
 `
 
-func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
-	exist := sql.NullBool{}
-	id := ""
-	if isID {
-		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
-		id = slugOrId
-	} else {
-		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
-	}
-
-	if exist.Valid {
-		return true, id
-	}
-
-	return false, ""
-}
-
 func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
+	log.Println("ThreadGetPosts")
 	isID := false
 	if _, ok := strconv.Atoi(params.SlugOrID); ok == nil {
 		isID = true
@@ -306,18 +147,6 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	var rows *sql.Rows
 	var selectErr error
 	selectedPosts := models.Posts{}
-	if params.Desc != nil {
-		log.Println("Desc: ", *params.Desc)
-	}
-	if params.Limit != nil {
-		log.Println("Limit: ", *params.Limit)
-	}
-	if params.Since != nil {
-		log.Println("Since: ", *params.Since)
-	}
-	if params.Sort != nil {
-		log.Println("Sort: ", *params.Sort)
-	}
 
 	switch *params.Sort {
 	case "flat":
