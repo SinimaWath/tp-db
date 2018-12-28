@@ -94,7 +94,7 @@ const selectPostsTreeLimitDescBySlug = `
 	FROM post p
 	JOIN thread t on t.id = p.thread_id
 	WHERE t.slug = $1
-	ORDER BY p.path DESC
+	ORDER BY path DESC
 	LIMIT $2
 `
 
@@ -112,7 +112,7 @@ const selectPostsTreeLimitSinceDescBySlug = `
 	FROM post p
 	JOIN thread t on t.id = p.thread_id
 	WHERE t.slug = $1 and (p.path < (SELECT p2.path from post p2 where p2.id = $2))
-	ORDER BY p.path DESC, p.id DESC
+	ORDER BY path DESC
 	LIMIT $3
 `
 
@@ -130,7 +130,7 @@ const selectPostsTreeLimitDescByID = `
 	FROM post p
 	JOIN thread t on t.id = p.thread_id
 	WHERE t.id = $1
-	ORDER BY p.path DESC
+	ORDER BY path DESC
 	LIMIT $2
 `
 
@@ -148,7 +148,7 @@ const selectPostsTreeLimitSinceDescByID = `
 	FROM post p
 	JOIN thread t on t.id = p.thread_id
 	WHERE t.id = $1 and (p.path < (SELECT p2.path from post p2 where p2.id = $2))
-	ORDER BY p.path DESC, p.id DESC
+	ORDER BY p.path DESC
 	LIMIT $3
 `
 
@@ -219,27 +219,25 @@ const selectPostsParentTreeLimitByID = `
 	WHERE t.id = $1 and p.path[1] IN (
 		SELECT p2.path[1]
 		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.id = $2 AND p2.parent_id IS NULL
-		ORDER BY p2.path[1]
+		WHERE p2.thread_id = $2 AND p2.parent_id IS NULL
+		ORDER BY p2.path
 		LIMIT $3
 	)
 	ORDER BY path
 `
 
 const selectPostsParentTreeLimitDescByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
-	FROM post p
-	JOIN thread t on t.id = p.thread_id
-	WHERE t.id = $1 and p.path[1] IN (
-		SELECT p2.path[1]
-		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.id = $2 AND p2.parent_id IS NULL
-		ORDER BY p2.path[1] DESC
-		LIMIT $3 
-	)
-	ORDER BY p.path[1] DESC, p.path
+SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug
+FROM post p
+JOIN thread t on t.id = p.thread_id
+WHERE t.id = $1 and p.path[1] IN (
+    SELECT p2.path[1]
+    FROM post p2
+	WHERE p2.parent_id IS NULL and p2.thread_id = $2
+	ORDER BY p2.path DESC
+    LIMIT $3
+)
+ORDER BY p.path[1] DESC, p.path[2:]
 `
 
 const selectPostsParentTreeLimitSinceByID = `
@@ -249,9 +247,8 @@ const selectPostsParentTreeLimitSinceByID = `
 	WHERE t.id = $1 and p.path[1] IN (
 		SELECT p2.path[1]
 		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.id = $2 AND p2.parent_id IS NULL and p2.path[1] > (SELECT p3.path[1] from post p3 where p3.id = $3)
-		ORDER BY p2.path[1]
+		WHERE p2.thread_id = $2 AND p2.parent_id IS NULL and p2.path[1] > (SELECT p3.path[1] from post p3 where p3.id = $3)
+		ORDER BY p2.path
 		LIMIT $4
 	)
 	ORDER BY p.path
@@ -264,12 +261,11 @@ const selectPostsParentTreeLimitSinceDescByID = `
 	WHERE t.id = $1 and p.path[1] IN (
 		SELECT p2.path[1]
 		FROM post p2
-		JOIN thread t1 on p2.thread_id = t1.id
-		WHERE t1.id = $2 AND p2.parent_id IS NULL and p2.path[1] < (SELECT p3.path[1] from post p3 where p3.id = $3)
-		ORDER BY p2.path[1] DESC
+		WHERE p2.thread_id = $2 AND p2.parent_id IS NULL and p2.path[1] < (SELECT p3.path[1] from post p3 where p3.id = $3)
+		ORDER BY p2.path DESC
 		LIMIT $4
 	)
-	ORDER BY p.path
+	ORDER BY p.path[1] DESC, p.path[2:]
 `
 
 const queryCheckThreadExistID = `
@@ -277,22 +273,24 @@ const queryCheckThreadExistID = `
 `
 
 const queryCheckThreadExistSlug = `
-	SELECT true FROM thread where slug = $1
+	SELECT true, id FROM thread where slug = $1
 `
 
-func checkThreadExist(db *sql.DB, slugOrId string, isID bool) bool {
+func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
 	exist := sql.NullBool{}
+	id := ""
 	if isID {
 		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
+		id = slugOrId
 	} else {
-		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist)
+		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
 	}
 
 	if exist.Valid {
-		return true
+		return true, id
 	}
 
-	return false
+	return false, ""
 }
 
 func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
@@ -300,8 +298,8 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	if _, ok := strconv.Atoi(params.SlugOrID); ok == nil {
 		isID = true
 	}
-
-	if !checkThreadExist(f.db, params.SlugOrID, isID) {
+	exist, id := checkThreadExistAndGetID(f.db, params.SlugOrID, isID)
+	if !exist {
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
@@ -323,109 +321,53 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 
 	switch *params.Sort {
 	case "flat":
-		if isID {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceDescByID, params.SlugOrID,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceByID, params.SlugOrID,
-						params.Since, params.Limit)
-				}
+		if params.Since != nil {
+			if params.Desc != nil && *params.Desc == true {
+				rows, selectErr = f.db.Query(selectPostsFlatLimitSinceDescByID, id,
+					params.Since, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitDescByID, params.SlugOrID, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitByID, params.SlugOrID, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsFlatLimitSinceByID, id,
+					params.Since, params.Limit)
 			}
 		} else {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceDescBySlug, params.SlugOrID,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceBySlug, params.SlugOrID,
-						params.Since, params.Limit)
-				}
+			if params.Desc != nil && *params.Desc == true {
+				rows, selectErr = f.db.Query(selectPostsFlatLimitDescByID, id, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitDescBySlug, params.SlugOrID, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitBySlug, params.SlugOrID, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsFlatLimitByID, id, params.Limit)
 			}
 		}
 	case "tree":
-		if isID {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceDescByID, params.SlugOrID,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceByID, params.SlugOrID,
-						params.Since, params.Limit)
-				}
+		if params.Since != nil {
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsTreeLimitSinceDescByID, id,
+					params.Since, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitDescByID, params.SlugOrID, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitByID, params.SlugOrID, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsTreeLimitSinceByID, id,
+					params.Since, params.Limit)
 			}
 		} else {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceDescBySlug, params.SlugOrID,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceBySlug, params.SlugOrID,
-						params.Since, params.Limit)
-				}
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsTreeLimitDescByID, id, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitDescBySlug, params.SlugOrID, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitBySlug, params.SlugOrID, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsTreeLimitByID, id, params.Limit)
 			}
 		}
 	case "parent_tree":
-		if isID {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceDescByID, params.SlugOrID, params.SlugOrID,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceByID, params.SlugOrID, params.SlugOrID,
-						params.Since, params.Limit)
-				}
+		if params.Since != nil {
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceDescByID, id, id,
+					params.Since, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitDescByID, params.SlugOrID, params.SlugOrID,
-						params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitByID, params.SlugOrID, params.SlugOrID,
-						params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceByID, id, id,
+					params.Since, params.Limit)
 			}
 		} else {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceDescBySlug, params.SlugOrID, params.SlugOrID,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceBySlug, params.SlugOrID, params.SlugOrID,
-						params.Since, params.Limit)
-				}
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitDescByID, id, id,
+					params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitDescBySlug, params.SlugOrID, params.SlugOrID,
-						params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitBySlug, params.SlugOrID, params.SlugOrID,
-						params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitByID, id, id,
+					params.Limit)
 			}
 		}
 	}
@@ -456,4 +398,8 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 		selectedPosts = append(selectedPosts, post)
 	}
 	return operations.NewThreadGetPostsOK().WithPayload(selectedPosts)
+}
+
+func printPosts(posts *models.Posts) {
+
 }
