@@ -298,8 +298,8 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	if _, ok := strconv.Atoi(params.SlugOrID); ok == nil {
 		isID = true
 	}
-
-	if exist, id := checkThreadExistAndGetID(f.db, params.SlugOrID, isID); !exist {
+	exist, id := checkThreadExistAndGetID(f.db, params.SlugOrID, isID)
+	if !exist {
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
@@ -321,109 +321,53 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 
 	switch *params.Sort {
 	case "flat":
-		if isID {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceDescByID, id,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceByID, id,
-						params.Since, params.Limit)
-				}
+		if params.Since != nil {
+			if params.Desc != nil && *params.Desc == true {
+				rows, selectErr = f.db.Query(selectPostsFlatLimitSinceDescByID, id,
+					params.Since, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitDescByID, id, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitByID, id, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsFlatLimitSinceByID, id,
+					params.Since, params.Limit)
 			}
 		} else {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceDescBySlug, id,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitSinceBySlug, id,
-						params.Since, params.Limit)
-				}
+			if params.Desc != nil && *params.Desc == true {
+				rows, selectErr = f.db.Query(selectPostsFlatLimitDescByID, id, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc == true {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitDescBySlug, id, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsFlatLimitBySlug, id, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsFlatLimitByID, id, params.Limit)
 			}
 		}
 	case "tree":
-		if isID {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceDescByID, id,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceByID, id,
-						params.Since, params.Limit)
-				}
+		if params.Since != nil {
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsTreeLimitSinceDescByID, id,
+					params.Since, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitDescByID, id, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitByID, id, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsTreeLimitSinceByID, id,
+					params.Since, params.Limit)
 			}
 		} else {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceDescBySlug, id,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitSinceBySlug, id,
-						params.Since, params.Limit)
-				}
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsTreeLimitDescByID, id, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitDescBySlug, id, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsTreeLimitBySlug, id, params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsTreeLimitByID, id, params.Limit)
 			}
 		}
 	case "parent_tree":
-		if isID {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceDescByID, id, id,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceByID, id, id,
-						params.Since, params.Limit)
-				}
+		if params.Since != nil {
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceDescByID, id, id,
+					params.Since, params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitDescByID, id, id,
-						params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitByID, id, id,
-						params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceByID, id, id,
+					params.Since, params.Limit)
 			}
 		} else {
-			if params.Since != nil {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceDescBySlug, id, id,
-						params.Since, params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitSinceBySlug, id, id,
-						params.Since, params.Limit)
-				}
+			if params.Desc != nil && *params.Desc {
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitDescByID, id, id,
+					params.Limit)
 			} else {
-				if params.Desc != nil && *params.Desc {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitDescBySlug, id, id,
-						params.Limit)
-				} else {
-					rows, selectErr = f.db.Query(selectPostsParentTreeLimitBySlug, id, params.SlugOrID,
-						params.Limit)
-				}
+				rows, selectErr = f.db.Query(selectPostsParentTreeLimitByID, id, id,
+					params.Limit)
 			}
 		}
 	}
