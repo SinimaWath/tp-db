@@ -12,6 +12,12 @@ import (
 	pq "github.com/lib/pq"
 )
 
+const (
+	queryInsertUser           = "INSERT INTO \"user\" (nickname, fullname, about, email) VALUES ($1, $2, $3, $4);"
+	querySelectUser           = `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1 OR email = $2`
+	querySelectUserByNickname = `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1`
+)
+
 func (pg ForumPgsql) UserCreate(params operations.UserCreateParams) middleware.Responder {
 
 	err := insertUser(pg.db, params.Nickname, params.Profile.Fullname, params.Profile.About, params.Profile.Email)
@@ -51,8 +57,7 @@ func (pg ForumPgsql) UserGetOne(params operations.UserGetOneParams) middleware.R
 }
 
 func insertUser(db *sql.DB, nickname, fullname, about, email string) error {
-	queryInsert := "INSERT INTO \"user\" (nickname, fullname, about, email) VALUES ($1, $2, $3, $4);"
-	_, err := db.Exec(queryInsert, nickname, fullname, about, email)
+	_, err := db.Exec(queryInsertUser, nickname, fullname, about, email)
 	if err, ok := err.(*pq.Error); ok && err != nil {
 		if err.Code == pgErrCodeUniqueViolation {
 			return errUniqueViolation
@@ -63,8 +68,7 @@ func insertUser(db *sql.DB, nickname, fullname, about, email string) error {
 }
 
 func selectUsersByNicknameOrEmail(db *sql.DB, users *models.Users, nickname, email string) error {
-	querySelect := `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1 OR email = $2`
-	rows, err := db.Query(querySelect, nickname, email)
+	rows, err := db.Query(querySelectUser, nickname, email)
 
 	if err != nil {
 		return err
@@ -87,9 +91,8 @@ func selectUsersByNicknameOrEmail(db *sql.DB, users *models.Users, nickname, ema
 }
 
 func selectUser(db *sql.DB, user *models.User, nickname string) error {
-	querySelect := `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1`
 
-	row := db.QueryRow(querySelect, nickname)
+	row := db.QueryRow(querySelectUserByNickname, nickname)
 
 	if err := row.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname); err != nil {
 		if err == sql.ErrNoRows {

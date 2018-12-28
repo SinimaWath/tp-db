@@ -59,7 +59,7 @@ func formThreadUpdateQueryLast(message, title string) (string, []interface{}) {
 	}
 
 	query += strings.Join(updateField, ", ")
-	query += fmt.Sprint(" WHERE id IN (SELECT max(id) FROM thread)")
+	query += (" WHERE id IN (SELECT max(id) FROM thread)")
 	return query, resultArgs
 }
 

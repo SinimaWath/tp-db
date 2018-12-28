@@ -455,6 +455,5 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 
 		selectedPosts = append(selectedPosts, post)
 	}
-
 	return operations.NewThreadGetPostsOK().WithPayload(selectedPosts)
 }
