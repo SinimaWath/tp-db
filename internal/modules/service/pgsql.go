@@ -21,5 +21,5 @@ func NewForumPgsql(dsn string) *ForumPgsql {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return &ForumPgsql{db}
+	return &ForumPgsql{db: db}
 }

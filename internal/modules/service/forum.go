@@ -91,16 +91,13 @@ func selectForum(db *sql.DB, slug string, forum *models.Forum) error {
 	return nil
 }
 
-const queryForumWithThreadsAndPosts = `SELECT u.nickname, f.slug, f.title,
- (select count(*) from thread t
- join post p on t.id = p.thread_id 
- where t.forum_slug = $1),
- (select count(*) from thread t 
- where t.forum_slug = $2)
-FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $3`
+const queryForumWithThreadsAndPosts = `
+SELECT u.nickname, f.slug, f.title, f.post_count, f.thread_count
+FROM forum f JOIN "user" u ON u.nickname = f.user_nick 
+WHERE f.slug = $1`
 
 func selectForumWithThreadsAndPosts(db *sql.DB, slug string, forum *models.Forum) error {
-	row := db.QueryRow(queryForumWithThreadsAndPosts, slug, slug, slug)
+	row := db.QueryRow(queryForumWithThreadsAndPosts, slug)
 
 	if err := row.Scan(&forum.User, &forum.Slug, &forum.Title, &forum.Posts, &forum.Threads); err != nil {
 		if err == sql.ErrNoRows {

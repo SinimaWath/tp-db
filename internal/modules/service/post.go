@@ -14,16 +14,30 @@ import (
 )
 
 func (pg ForumPgsql) PostsCreate(params operations.PostsCreateParams) middleware.Responder {
+	isID := false
+	if _, err := strconv.Atoi(params.SlugOrID); err == nil {
+		isID = true
+	}
+
+	exist, ID := checkThreadExistAndGetID(pg.db, params.SlugOrID, isID)
+	if !exist {
+		return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
+	}
+
+	tx, err := pg.db.Begin()
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
 	var insertErr error
 	var insertedPosts *models.Posts
-	if _, err := strconv.Atoi(params.SlugOrID); err == nil {
-		insertedPosts, insertErr = postsInsert(pg.db, params.Posts, params.SlugOrID, true)
-	} else {
-		insertedPosts, insertErr = postsInsert(pg.db, params.Posts, params.SlugOrID, false)
-	}
+
+	insertedPosts, insertErr = postsInsert(tx, params.Posts, ID, true)
 
 	if insertErr != nil {
 		log.Println(insertErr)
+		tx.Rollback()
 		if err, ok := insertErr.(*pq.Error); ok {
 			log.Printf("pqError: %#v", err)
 			if err.Code == pgErrForeignKeyViolation {
@@ -41,8 +55,22 @@ func (pg ForumPgsql) PostsCreate(params operations.PostsCreateParams) middleware
 		}
 		return nil
 	}
+
+	_, err = tx.Exec(updateForumPostCount, len(params.Posts), ID)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+
+	tx.Commit()
 	return operations.NewPostsCreateCreated().WithPayload(*insertedPosts)
 }
+
+const updateForumPostCount = `
+UPDATE forum f SET post_count = post_count + $1
+FROM thread t
+WHERE f.slug = t.forum_slug and t.id = $2
+`
 
 const postInsertQuery = `
 	INSERT INTO post (author, created, message, edited, parent_id, thread_id)
@@ -119,7 +147,7 @@ func formInsertValues(author, created, message, slugOrID string, isID bool, isEd
 	return values
 }
 
-func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*models.Posts, error) {
+func postsInsert(db *sql.Tx, posts models.Posts, slugOrID string, isID bool) (*models.Posts, error) {
 	valuesArgsById := make([]interface{}, 0, len(posts)*6)
 	valuesArgsBySlug := make([]interface{}, 0, len(posts)*5)
 
@@ -188,7 +216,7 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 			&post.IsEdited, &post.Message, &parentId, &post.Thread, &post.Forum)
 		if err != nil {
 			log.Println(err)
-			continue
+			return nil, err
 		}
 
 		if parentId.Valid {
