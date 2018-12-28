@@ -39,6 +39,7 @@ func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware
 }
 
 func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware.Responder {
+	log.Println("ForumGetOne")
 	forum := &models.Forum{}
 	err := selectForumWithThreadsAndPosts(pg.db, params.Slug, forum)
 	switch err {

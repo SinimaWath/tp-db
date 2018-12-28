@@ -74,7 +74,7 @@ func checkIsAllNullString(nullString string, str ...string) bool {
 }
 
 func (pg ForumPgsql) ThreadUpdate(params operations.ThreadUpdateParams) middleware.Responder {
-
+	log.Println("ThreadUpdate")
 	var queryUpdate string
 	var args []interface{}
 

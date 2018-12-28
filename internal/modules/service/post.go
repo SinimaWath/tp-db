@@ -231,9 +231,8 @@ func postsInsert(db *sql.Tx, posts models.Posts, slugOrID string, isID bool) (*m
 }
 
 const querySelectPostByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, t.forum_slug 
+	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug 
 	from post p
-	join thread t on p.thread_id = t.id
 	where p.id = $1
 `
 
@@ -251,11 +250,11 @@ func selectPost(db *sql.DB, id int64, post *models.Post) error {
 }
 
 func (f ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Responder {
+	log.Println("PostGetOne")
 	post := &models.PostFull{
 		Post: &models.Post{},
 	}
 	err := selectPost(f.db, params.ID, post.Post)
-	log.Printf("Select post: %v\n", *post.Post)
 	if err != nil {
 		log.Println(err)
 		return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})

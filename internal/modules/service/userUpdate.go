@@ -44,7 +44,7 @@ func formUserUpdateQuery(email, fullname, about, nickname string) (string, []int
 }
 
 func (pg ForumPgsql) UserUpdate(params operations.UserUpdateParams) middleware.Responder {
-
+	log.Println("UserUpdate")
 	if userUpdateCheckNull(params.Profile) {
 		return pg.UserGetOne(operations.UserGetOneParams{
 			Nickname: params.Nickname,

@@ -234,6 +234,7 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 }
 
 func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) middleware.Responder {
+	log.Println("ForumGetThreads")
 	threads := &models.Threads{}
 	limit := -1
 	if params.Limit != nil {
@@ -258,6 +259,7 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 }
 
 func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middleware.Responder {
+	log.Println("ThreadGetOne")
 	thread := &models.Thread{}
 	var selectErr error
 
@@ -269,8 +271,7 @@ func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middlewa
 
 	switch selectErr {
 	case errNotFound:
-		responseError := &models.Error{"Can't find thread"}
-		return operations.NewThreadGetOneNotFound().WithPayload(responseError)
+		return operations.NewThreadGetOneNotFound().WithPayload(&models.Error{})
 	case nil:
 		return operations.NewThreadGetOneOK().WithPayload(thread)
 	default:

@@ -151,6 +151,7 @@ func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, str
 }
 
 func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
+	log.Println("ThreadGetPosts")
 	isID := false
 	if _, ok := strconv.Atoi(params.SlugOrID); ok == nil {
 		isID = true
@@ -163,18 +164,6 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	var rows *sql.Rows
 	var selectErr error
 	selectedPosts := models.Posts{}
-	if params.Desc != nil {
-		log.Println("Desc: ", *params.Desc)
-	}
-	if params.Limit != nil {
-		log.Println("Limit: ", *params.Limit)
-	}
-	if params.Since != nil {
-		log.Println("Since: ", *params.Since)
-	}
-	if params.Sort != nil {
-		log.Println("Sort: ", *params.Sort)
-	}
 
 	switch *params.Sort {
 	case "flat":
