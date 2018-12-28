@@ -18,9 +18,9 @@ const (
 	queryInsertThread = `INSERT INTO thread (slug, user_nick, created, forum_slug, title, message) 
 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 
-	querySelectThreadByID = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id FROM thread t
+	querySelectThreadByID = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id, t.votes FROM thread t
 JOIN forum f ON f.slug = t.forum_slug WHERE t.id = $1`
-	querySelectThreadBySlug = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id FROM thread t
+	querySelectThreadBySlug = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id, t.votes FROM thread t
 JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
 
 	querySelectThreadWithVotesByID = `SELECT f.slug, t.user_nick, t.created  AS created, t.slug, t.title, t.message, t.id, t.votes FROM thread t
@@ -30,7 +30,7 @@ JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
 
 	querySelectThreadIDBySlug = `SELECT t.id from thread t where t.slug = $1`
 
-	querySelectThreads = `SELECT t.id, f.slug, u.nickname, t.created as created, t.slug, t.title, t.message FROM thread t
+	querySelectThreads = `SELECT t.id, f.slug, u.nickname, t.created as created, t.slug, t.title, t.message, t.votes FROM thread t
 	JOIN forum f ON f.slug = t.forum_slug
 	JOIN "user" u ON u.nickname = t.user_nick
 	WHERE f.slug = $1`
@@ -104,7 +104,7 @@ func selectThread(db *sql.DB, slugOrID string, isID bool, thread *models.Thread)
 	nullableSlug := sql.NullString{}
 
 	if err := row.Scan(&thread.Forum, &thread.Author, &thread.Created, &nullableSlug,
-		&thread.Title, &thread.Message, &thread.ID); err != nil {
+		&thread.Title, &thread.Message, &thread.ID, &thread.Votes); err != nil {
 		if err == sql.ErrNoRows {
 			return errNotFound
 		}
@@ -190,7 +190,7 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 	for rows.Next() {
 		thread := &models.Thread{}
 		nullableSlug := sql.NullString{}
-		err := rows.Scan(&thread.ID, &thread.Forum, &thread.Author, &thread.Created, &nullableSlug, &thread.Title, &thread.Message)
+		err := rows.Scan(&thread.ID, &thread.Forum, &thread.Author, &thread.Created, &nullableSlug, &thread.Title, &thread.Message, &thread.Votes)
 		if err != nil {
 			log.Println(err)
 		}
