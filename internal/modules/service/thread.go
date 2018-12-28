@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
@@ -28,6 +29,11 @@ JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
 	JOIN forum f ON f.slug = t.forum_slug WHERE t.slug = $1`
 
 	querySelectThreadIDBySlug = `SELECT t.id from thread t where t.slug = $1`
+
+	querySelectThreads = `SELECT t.id, f.slug, u.nickname, t.created as created, t.slug, t.title, t.message FROM thread t
+	JOIN forum f ON f.slug = t.forum_slug
+	JOIN "user" u ON u.nickname = t.user_nick
+	WHERE f.slug = $1`
 )
 
 func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middleware.Responder {
@@ -65,7 +71,7 @@ func (pg ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middlewa
 func insertThread(db *sql.DB, slug, author, title, message, forum string, created *strfmt.DateTime) (int, error) {
 
 	nullableSlug := sql.NullString{}
-	fmt.Println("Slug: ", slug)
+
 	if slug == "" {
 		nullableSlug.Valid = false
 	} else {
@@ -79,7 +85,7 @@ func insertThread(db *sql.DB, slug, author, title, message, forum string, create
 	var id int
 
 	err := row.Scan(&id)
-	fmt.Println("Scanned id: ", id)
+
 	if err != nil {
 		return 0, err
 	}
@@ -148,35 +154,34 @@ func selectThreadIDBySlug(db *sql.Tx, slug string) (int, error) {
 	return id, err
 }
 func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads *models.Threads) error {
-	query := `SELECT t.id, f.slug, u.nickname, t.created as created, t.slug, t.title, t.message FROM thread t
-	JOIN forum f ON f.slug = t.forum_slug
-	JOIN "user" u ON u.nickname = t.user_nick
-	WHERE f.slug = $1`
+
+	query := &strings.Builder{}
+	query.WriteString(querySelectThreads)
 
 	args := []interface{}{slug}
 	placeholder := 2
 	if since != "" {
 		if desc {
-			query += fmt.Sprintf(" AND t.created <= $%v", placeholder)
+			query.WriteString(fmt.Sprintf(" AND t.created <= $%v", placeholder))
 		} else {
-			query += fmt.Sprintf(" AND t.created >= $%v", placeholder)
+			query.WriteString(fmt.Sprintf(" AND t.created >= $%v", placeholder))
 		}
 		placeholder++
 		args = append(args, since)
 	}
 
-	query += " ORDER BY t.created"
+	query.WriteString(" ORDER BY t.created")
 
 	if desc != false {
-		query += " DESC"
+		query.WriteString(" DESC")
 	}
 
 	if limit != -1 {
-		query += fmt.Sprintf(" LIMIT $%v", placeholder)
+		query.WriteString(fmt.Sprintf(" LIMIT $%v", placeholder))
 		args = append(args, limit)
 	}
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(query.String(), args...)
 	if err != nil {
 		return err
 	}
@@ -206,7 +211,6 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 }
 
 func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) middleware.Responder {
-	log.Println("ForumThread")
 	threads := &models.Threads{}
 	limit := -1
 	if params.Limit != nil {
@@ -226,10 +230,8 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 		responseError := models.Error{Message: fmt.Sprintf("Can't find forum by slug: %v", params.Slug)}
 		return operations.NewForumGetThreadsNotFound().WithPayload(&responseError)
 	} else if err != nil {
-		log.Println(err)
 		return nil
 	}
-	log.Printf("%#v\n", threads)
 	return operations.NewForumGetThreadsOK().WithPayload(*threads)
 }
 

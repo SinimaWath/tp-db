@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -28,7 +27,6 @@ func voiceToBool(voice int32) bool {
 func (pg *ForumPgsql) ThreadVote(params operations.ThreadVoteParams) middleware.Responder {
 	tx, err := pg.db.Begin()
 	if err != nil {
-		fmt.Println(err)
 		return nil
 	}
 
@@ -47,13 +45,12 @@ func (pg *ForumPgsql) ThreadVote(params operations.ThreadVoteParams) middleware.
 
 	if err, ok := execErr.(*pq.Error); ok && execErr != nil {
 		tx.Rollback()
-		fmt.Println(err)
+
 		if err.Code == pgErrForeignKeyViolation {
 			return operations.NewThreadVoteNotFound().WithPayload(&models.Error{})
 		}
 		return nil
 	} else if execErr != nil {
-		fmt.Println(execErr)
 		tx.Rollback()
 		return nil
 	}
@@ -62,13 +59,11 @@ func (pg *ForumPgsql) ThreadVote(params operations.ThreadVoteParams) middleware.
 
 	if err, ok := execErr.(*pq.Error); ok && execErr != nil {
 		tx.Rollback()
-		fmt.Println(err)
 		if err.Code == pgErrForeignKeyViolation {
 			return operations.NewThreadVoteNotFound().WithPayload(&models.Error{})
 		}
 		return nil
 	} else if execErr != nil {
-		fmt.Println(execErr)
 		tx.Rollback()
 		return nil
 	}

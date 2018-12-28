@@ -54,6 +54,7 @@ CREATE INDEX idx_nick_email ON "user" (nickname, email);
 CREATE INDEX idx_forum_slug ON forum (slug);
 CREATE INDEX idx_thread_id_slug ON thread(id, slug);
 CREATE INDEX idx_vote ON vote(thread_id, voice);
+CREATE INDEX idx_post ON post(id, created);
 
 CREATE OR REPLACE FUNCTION change_edited_post() RETURNS trigger as $change_edited_post$
 BEGIN

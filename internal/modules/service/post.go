@@ -123,7 +123,7 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 	valuesArgsById := make([]interface{}, 0, len(posts)*6)
 	valuesArgsBySlug := make([]interface{}, 0, len(posts)*5)
 
-	finalInsertValues := ""
+	finalInsertValues := strings.Builder{}
 	createdStr := ""
 	insertedPosts := &models.Posts{}
 
@@ -153,23 +153,26 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 				post.IsEdited, post.Parent, post.Thread, idx*4+1, &valuesArgsBySlug)
 		}
 		if idx != 0 {
-			finalInsertValues += ",\n"
+			finalInsertValues.WriteString(",\n")
 		}
-		finalInsertValues += insertValues
+		finalInsertValues.WriteString(insertValues)
 	}
 
-	finalQuery := postInsertQuery + finalInsertValues
-	finalQuery += " RETURNING id, author, created, edited, message, parent_id, thread_id, "
-	finalQuery += "(select t.forum_slug from thread t where t.id = thread_id)"
+	finalQuery := strings.Builder{}
+	finalQuery.WriteString(postInsertQuery)
+	finalQuery.WriteString(finalInsertValues.String())
+
+	finalQuery.WriteString(" RETURNING id, author, created, edited, message, parent_id, thread_id, ")
+	finalQuery.WriteString("(select t.forum_slug from thread t where t.id = thread_id)")
 	//fmt.Println(finalQuery)
 	var rows *sql.Rows
 	var queryError error
 	if isID {
 		//fmt.Printf("Values by id: %#v\n", valuesArgsById)
-		rows, queryError = db.Query(finalQuery, valuesArgsById...)
+		rows, queryError = db.Query(finalQuery.String(), valuesArgsById...)
 	} else {
 		//fmt.Printf("Values by slug: %#v\n", valuesArgsBySlug)
-		rows, queryError = db.Query(finalQuery, valuesArgsBySlug...)
+		rows, queryError = db.Query(finalQuery.String(), valuesArgsBySlug...)
 	}
 
 	if queryError != nil {
@@ -198,7 +201,6 @@ func postsInsert(db *sql.DB, posts models.Posts, slugOrID string, isID bool) (*m
 
 	}
 
-	//log.Printf("Inserted posts: %#v\n", insertedPosts)
 	return insertedPosts, nil
 }
 
