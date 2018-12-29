@@ -282,18 +282,20 @@ func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middlewa
 }
 
 func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
-	exist := sql.NullBool{}
 	id := ""
 	if isID {
-		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
+		err := db.QueryRow(queryCheckThreadExistID, slugOrId).Scan()
+		if err != nil {
+			log.Println(slugOrId + " checkThreadExistAndGetID ERROR: " + err.Error())
+			return false, ""
+		}
 		id = slugOrId
 	} else {
-		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
+		err := db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&id)
+		if err != nil {
+			log.Println(slugOrId + " checkThreadExistAndGetID ERROR: " + err.Error())
+			return false, ""
+		}
 	}
-
-	if exist.Valid {
-		return true, id
-	}
-
-	return false, ""
+	return true, id
 }

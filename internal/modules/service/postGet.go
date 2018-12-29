@@ -126,11 +126,11 @@ const selectPostsParentTreeLimitSinceDescByID = `
 `
 
 const queryCheckThreadExistID = `
-	SELECT true FROM thread where id = $1
+	SELECT FROM thread where id = $1
 `
 
 const queryCheckThreadExistSlug = `
-	SELECT true, id FROM thread where slug = $1
+	SELECT id FROM thread where slug = $1
 `
 
 func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
@@ -141,7 +141,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	}
 	exist, id := checkThreadExistAndGetID(f.db, params.SlugOrID, isID)
 	if !exist {
-		log.Println("ThreadGetPosts ERROR: thread is not exist KEK")
+		log.Println("ThreadGetPosts ERROR: thread is not exist with slugOrID " + params.SlugOrID)
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
