@@ -24,8 +24,6 @@ ENV GOROOT /usr/lib/go-1.10
 ENV GOPATH /opt/go
 ENV PATH $GOROOT/bin:$GOPATH/bin:/usr/local/go/bin:$PATH
 
-RUN go get -u github.com/golang/dep/cmd/dep
-
 # Копируем исходный код в Docker-контейнер
 WORKDIR $GOPATH/src/github.com/SinimaWath/tp-db/
 ADD . $GOPATH/src/github.com/SinimaWath/tp-db/
