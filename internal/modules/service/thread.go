@@ -209,7 +209,6 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 		return err
 	}
 
-	defer rows.Close()
 	for rows.Next() {
 		thread := &models.Thread{}
 		nullableSlug := sql.NullString{}
@@ -225,6 +224,7 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 
 		*threads = append(*threads, thread)
 	}
+	rows.Close()
 
 	if err := rows.Err(); err != nil {
 		return err
@@ -253,6 +253,7 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 	if len(*threads) == 0 && !pg.checkForumExist(params.Slug) {
 		return operations.NewForumGetThreadsNotFound().WithPayload(&models.Error{})
 	} else if err != nil {
+		log.Println("ForumGetThreads ERROR: " + err.Error())
 		return nil
 	}
 	return operations.NewForumGetThreadsOK().WithPayload(*threads)

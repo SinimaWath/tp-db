@@ -141,6 +141,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	}
 	exist, id := checkThreadExistAndGetID(f.db, params.SlugOrID, isID)
 	if !exist {
+		log.Println("ThreadGetPosts ERROR: thread is not exist KEK")
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
@@ -202,7 +203,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	}
 
 	if selectErr != nil {
-		log.Println(selectErr)
+		log.Println("ThreadGetPosts ERROR: " + selectErr.Error())
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
@@ -214,7 +215,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 			&post.Message, &parentID, &post.Thread, &post.Forum)
 
 		if err != nil {
-			log.Println(err)
+			log.Println("ThreadGetPosts ERROR: " + err.Error())
 			return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 		}
 
@@ -226,9 +227,6 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 
 		selectedPosts = append(selectedPosts, post)
 	}
+
 	return operations.NewThreadGetPostsOK().WithPayload(selectedPosts)
-}
-
-func printPosts(posts *models.Posts) {
-
 }

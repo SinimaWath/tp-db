@@ -14,6 +14,10 @@ CREATE TABLE "user" (
   email citext unique not null
 );
 
+CREATE INDEX idx_nick_nick ON "user" (nickname);
+CREATE INDEX idx_nick_email ON "user" (email);
+CREATE INDEX idx_nick_cover ON "user" (about, email, fullname, nickname);
+
 CREATE TABLE forum (
   user_nick   citext references "user",
   slug        citext PRIMARY KEY,
@@ -21,6 +25,8 @@ CREATE TABLE forum (
   thread_count integer default 0 not null,
   post_count integer default 0 not null
 );
+
+CREATE INDEX idx_forum_slug ON forum (slug);
 
 CREATE TABLE thread (
   id BIGSERIAL PRIMARY KEY,
@@ -33,6 +39,10 @@ CREATE TABLE thread (
   message text not null
 );
 
+CREATE INDEX idx_thread_id ON thread(id);
+CREATE INDEX idx_thread_slug ON thread(slug);
+CREATE INDEX idx_thread_f_slug ON thread(forum_slug);
+
 CREATE TABLE vote (
   id BIGSERIAL PRIMARY KEY,
   nickname citext references "user",
@@ -40,6 +50,8 @@ CREATE TABLE vote (
   thread_id integer references thread,
   CONSTRAINT unique_vote UNIQUE (nickname, thread_id)
 );
+
+CREATE INDEX idx_vote ON vote(thread_id, voice);
 
 CREATE TABLE post (
   id BIGSERIAL PRIMARY KEY,
@@ -53,11 +65,9 @@ CREATE TABLE post (
   thread_id integer references thread NOT NULL
 );
 
-CREATE INDEX idx_nick_email ON "user" (nickname, email);
-CREATE INDEX idx_forum_slug ON forum (slug);
-CREATE INDEX idx_thread_id_slug ON thread(id, slug);
-CREATE INDEX idx_vote ON vote(thread_id, voice);
-CREATE INDEX idx_post ON post(id, created);
+CREATE INDEX idx_post_id ON post(id);
+CREATE INDEX idx_post_thread_id_cr_i ON post(thread_id, created, id);
+CREATE INDEX idx_post_thread_id_p_i ON post(thread_id, (path[1]), id);
 
 CREATE OR REPLACE FUNCTION change_edited_post() RETURNS trigger as $change_edited_post$
 BEGIN
