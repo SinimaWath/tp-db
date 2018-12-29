@@ -27,6 +27,6 @@ func NewForumPgsql(dsn string) *ForumPgsql {
 	}
 	return &ForumPgsql{
 		db:     db,
-		forums: make(map[string]struct{}, 1000),
+		forums: make(map[string]struct{}, 20),
 	}
 }

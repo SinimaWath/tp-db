@@ -126,11 +126,11 @@ const selectPostsParentTreeLimitSinceDescByID = `
 `
 
 const queryCheckThreadExistID = `
-	SELECT true FROM thread where id = $1
+	SELECT FROM thread where id = $1
 `
 
 const queryCheckThreadExistSlug = `
-	SELECT true, id FROM thread where slug = $1
+	SELECT id FROM thread where slug = $1
 `
 
 func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
@@ -141,6 +141,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	}
 	exist, id := checkThreadExistAndGetID(f.db, params.SlugOrID, isID)
 	if !exist {
+		log.Println("ThreadGetPosts ERROR: thread is not exist with slugOrID " + params.SlugOrID)
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
@@ -202,7 +203,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 	}
 
 	if selectErr != nil {
-		log.Println(selectErr)
+		log.Println("ThreadGetPosts ERROR: " + selectErr.Error())
 		return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 	}
 
@@ -214,7 +215,7 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 			&post.Message, &parentID, &post.Thread, &post.Forum)
 
 		if err != nil {
-			log.Println(err)
+			log.Println("ThreadGetPosts ERROR: " + err.Error())
 			return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
 		}
 
@@ -226,9 +227,6 @@ func (f *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) midd
 
 		selectedPosts = append(selectedPosts, post)
 	}
+
 	return operations.NewThreadGetPostsOK().WithPayload(selectedPosts)
-}
-
-func printPosts(posts *models.Posts) {
-
 }

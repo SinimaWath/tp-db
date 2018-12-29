@@ -59,6 +59,7 @@ func (pg ForumPgsql) PostsCreate(params operations.PostsCreateParams) middleware
 	_, err = tx.Exec(updateForumPostCount, len(params.Posts), ID)
 	if err != nil {
 		log.Println(err)
+		tx.Rollback()
 		return nil
 	}
 
@@ -256,7 +257,7 @@ func (f ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Re
 	}
 	err := selectPost(f.db, params.ID, post.Post)
 	if err != nil {
-		log.Println(err)
+		log.Println("PostGetOne ERROR: " + err.Error())
 		return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
 	}
 
@@ -266,21 +267,21 @@ func (f ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Re
 			post.Author = &models.User{}
 			err = selectUser(f.db, post.Author, post.Post.Author)
 			if err != nil {
-				log.Println(err)
+				log.Println("PostGetOne ERROR: " + err.Error())
 				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
 			}
 		case "forum":
 			post.Forum = &models.Forum{}
 			err = selectForumWithThreadsAndPosts(f.db, post.Post.Forum, post.Forum)
 			if err != nil {
-				log.Println(err)
+				log.Println("PostGetOne ERROR: " + err.Error())
 				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
 			}
 		case "thread":
 			post.Thread = &models.Thread{}
 			err = selectThread(f.db, strconv.Itoa(int(post.Post.Thread)), true, post.Thread)
 			if err != nil {
-				log.Println(err)
+				log.Println("PostGetOne ERROR: " + err.Error())
 				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
 			}
 		}

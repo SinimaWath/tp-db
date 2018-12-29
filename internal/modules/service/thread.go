@@ -209,7 +209,6 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 		return err
 	}
 
-	defer rows.Close()
 	for rows.Next() {
 		thread := &models.Thread{}
 		nullableSlug := sql.NullString{}
@@ -225,6 +224,7 @@ func selectThreads(db *sql.DB, slug, since string, limit int, desc bool, threads
 
 		*threads = append(*threads, thread)
 	}
+	rows.Close()
 
 	if err := rows.Err(); err != nil {
 		return err
@@ -253,6 +253,7 @@ func (pg ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) mi
 	if len(*threads) == 0 && !pg.checkForumExist(params.Slug) {
 		return operations.NewForumGetThreadsNotFound().WithPayload(&models.Error{})
 	} else if err != nil {
+		log.Println("ForumGetThreads ERROR: " + err.Error())
 		return nil
 	}
 	return operations.NewForumGetThreadsOK().WithPayload(*threads)
@@ -281,18 +282,20 @@ func (pg ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middlewa
 }
 
 func checkThreadExistAndGetID(db *sql.DB, slugOrId string, isID bool) (bool, string) {
-	exist := sql.NullBool{}
 	id := ""
 	if isID {
-		db.QueryRow(queryCheckThreadExistID, slugOrId).Scan(&exist)
+		err := db.QueryRow(queryCheckThreadExistID, slugOrId).Scan()
+		if err != nil {
+			log.Println(slugOrId + " checkThreadExistAndGetID ERROR: " + err.Error())
+			return false, ""
+		}
 		id = slugOrId
 	} else {
-		db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&exist, &id)
+		err := db.QueryRow(queryCheckThreadExistSlug, slugOrId).Scan(&id)
+		if err != nil {
+			log.Println(slugOrId + " checkThreadExistAndGetID ERROR: " + err.Error())
+			return false, ""
+		}
 	}
-
-	if exist.Valid {
-		return true, id
-	}
-
-	return false, ""
+	return true, id
 }

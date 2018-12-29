@@ -67,10 +67,10 @@ func (pg ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middle
 		log.Println(err)
 		return operations.NewForumGetUsersNotFound().WithPayload(&models.Error{})
 	}
-	defer rows.Close()
 
 	users := models.Users{}
 
+	defer rows.Close()
 	for rows.Next() {
 		user := &models.User{}
 		scanErr := rows.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname)
@@ -80,5 +80,7 @@ func (pg ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middle
 		}
 		users = append(users, user)
 	}
+
+
 	return operations.NewForumGetUsersOK().WithPayload(users)
 }

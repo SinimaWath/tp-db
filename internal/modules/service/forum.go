@@ -76,13 +76,10 @@ func insertForum(db *sql.DB, user, slug, title string) error {
 
 func (pg ForumPgsql) checkForumExist(slug string) bool {
 
-	pg.RLock()
 	if _, exist := pg.forums[slug]; exist {
 		log.Println("Check forum from cache")
-		pg.RUnlock()
 		return true
 	}
-	pg.RUnlock()
 	row := pg.db.QueryRow(queryCheckForumExists, slug)
 	isExist := false
 	row.Scan(&isExist)

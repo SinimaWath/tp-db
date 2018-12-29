@@ -48,7 +48,7 @@ func (pg ForumPgsql) UserGetOne(params operations.UserGetOneParams) middleware.R
 	case nil:
 		return operations.NewUserGetOneOK().WithPayload(user)
 	default:
-		log.Println(err)
+		log.Println("UserGetOne ERROR: " + err.Error())
 		return nil
 	}
 }
