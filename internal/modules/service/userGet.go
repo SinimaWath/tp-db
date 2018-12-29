@@ -58,13 +58,14 @@ func formForumGetUsersQuery(slug string, since *string, limit *int32, desc *bool
 func (pg ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middleware.Responder {
 	log.Println("ForumGetUsers")
 	if !pg.checkForumExist(params.Slug) {
+		log.Println("ForumGetUsers ERROR: no such forum: " + params.Slug)
 		return operations.NewForumGetUsersNotFound().WithPayload(&models.Error{})
 	}
 
 	query, args := formForumGetUsersQuery(params.Slug, params.Since, params.Limit, params.Desc)
 	rows, err := pg.db.Query(query, args...)
 	if err != nil {
-		log.Println(err)
+		log.Println("ForumGetUsers ERROR: " + err.Error())
 		return operations.NewForumGetUsersNotFound().WithPayload(&models.Error{})
 	}
 
@@ -75,12 +76,11 @@ func (pg ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middle
 		user := &models.User{}
 		scanErr := rows.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname)
 		if scanErr != nil {
-			log.Println(scanErr)
-			return operations.NewForumGetUsersNotFound().WithPayload(&models.Error{})
+			log.Println("ForumGetUsers ERROR Scan Error: " + scanErr.Error())
+			return nil
 		}
 		users = append(users, user)
 	}
-
 
 	return operations.NewForumGetUsersOK().WithPayload(users)
 }

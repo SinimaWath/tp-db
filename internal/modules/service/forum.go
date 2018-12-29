@@ -12,7 +12,7 @@ import (
 
 const (
 	queryInsertForum      = `INSERT INTO forum (user_nick, slug, title) VALUES ($1, $2, $3)`
-	queryCheckForumExists = `SELECT EXISTS(SELECT 1 FROM forum where slug = $1)`
+	queryCheckForumExists = `SELECT FROM forum where slug = $1`
 	querySelectForum      = `SELECT u.nickname, f.slug, f.title FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $1`
 )
 
@@ -35,10 +35,6 @@ func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware
 		log.Println(err)
 		return nil
 	}
-
-	pg.Lock()
-	pg.forums[forum.Slug] = struct{}{}
-	pg.Unlock()
 
 	return operations.NewForumCreateCreated().WithPayload(forum)
 }
@@ -75,15 +71,12 @@ func insertForum(db *sql.DB, user, slug, title string) error {
 }
 
 func (pg ForumPgsql) checkForumExist(slug string) bool {
-
-	if _, exist := pg.forums[slug]; exist {
-		log.Println("Check forum from cache")
-		return true
+	err := pg.db.QueryRow(queryCheckForumExists, slug).Scan()
+	if err != nil {
+		log.Println(slug + " checkForumExist ERROR: " + err.Error())
+		return false
 	}
-	row := pg.db.QueryRow(queryCheckForumExists, slug)
-	isExist := false
-	row.Scan(&isExist)
-	return isExist
+	return true
 }
 
 func selectForum(db *sql.DB, slug string, forum *models.Forum) error {

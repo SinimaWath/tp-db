@@ -3,7 +3,6 @@ package service
 import (
 	"database/sql"
 	"log"
-	"sync"
 )
 
 const postgres = "postgres"
@@ -15,9 +14,6 @@ const (
 
 type ForumPgsql struct {
 	db *sql.DB
-
-	sync.RWMutex
-	forums map[string]struct{}
 }
 
 func NewForumPgsql(dsn string) *ForumPgsql {
@@ -26,7 +22,6 @@ func NewForumPgsql(dsn string) *ForumPgsql {
 		log.Fatal(err)
 	}
 	return &ForumPgsql{
-		db:     db,
-		forums: make(map[string]struct{}, 20),
+		db: db,
 	}
 }
