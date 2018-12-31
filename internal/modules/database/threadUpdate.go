@@ -1,8 +1,6 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
@@ -67,7 +65,7 @@ func UpdateThread(db *pgx.ConnPool, tu *models.ThreadUpdate, slugOrID string, t 
 
 	err := scanThread(row, t)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return ErrThreadNotFound
 		}
 		return err

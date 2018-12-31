@@ -57,33 +57,31 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 					return err
 				}
 				return ErrThreadConflict
-			case "25P02":
-				log.Println(err)
 			}
 		}
 		return err
 	}
 
-	/*	err = forumUpdateThreadCount(tx, thread.Forum)
+	err = forumUpdateThreadCount(tx, thread.Forum)
 
-		if err != nil {
-			if txErr := tx.Rollback(); txErr != nil {
-				log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
-				return txErr
-			}
-			return err
-		}*/
+	if err != nil {
+		if txErr := tx.Rollback(); txErr != nil {
+			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
+			return txErr
+		}
+		return err
+	}
 
-	/*	err = createForumUserTx(tx, thread.Author, thread.Forum)
+	err = createForumUserTx(tx, thread.Author, thread.Forum)
 
-		if err != nil {
+	if err != nil {
 
-			if txErr := tx.Rollback(); txErr != nil {
-				log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
-				return txErr
-			}
-			return err
-		}*/
+		if txErr := tx.Rollback(); txErr != nil {
+			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
+			return txErr
+		}
+		return err
+	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
 		log.Println("[ERROR] ThreadCreate tx.Commit(): " + commitErr.Error())

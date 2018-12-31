@@ -20,18 +20,24 @@ var (
 // Последовательность id, slug, user_nick, created, forum_slug, title, message, votes
 func scanThread(r *pgx.Row, t *models.Thread) error {
 	slug := sql.NullString{}
-	created := time.Time{}
+	created := pgx.NullTime{}
 	err := r.Scan(&t.ID, &slug, &t.Author, &created, &t.Forum, &t.Title, &t.Message, &t.Votes)
-
+	if err != nil {
+		return err
+	}
 	if slug.Valid {
 		t.Slug = slug.String
 	}
 
-	date, err := strfmt.ParseDateTime(created.Format(strfmt.MarshalFormat))
-	if err != nil {
-		t.Created = nil
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			t.Created = nil
+		} else {
+			t.Created = &date
+		}
 	} else {
-		t.Created = &date
+		t.Created = nil
 	}
 
 	return err
@@ -40,8 +46,10 @@ func scanThread(r *pgx.Row, t *models.Thread) error {
 func scanThreadRows(r *pgx.Rows, t *models.Thread) error {
 	slug := sql.NullString{}
 	created := time.Time{}
-	err := r.Scan(&t.ID, &slug, &t.Author, &t.Created, &t.Forum, &t.Title, &t.Message, &t.Votes)
-
+	err := r.Scan(&t.ID, &slug, &t.Author, &created, &t.Forum, &t.Title, &t.Message, &t.Votes)
+	if err != nil {
+		return err
+	}
 	if slug.Valid {
 		t.Slug = slug.String
 	}

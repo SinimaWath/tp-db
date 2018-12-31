@@ -1,8 +1,6 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/go-openapi/strfmt"
 	pgx "gopkg.in/jackc/pgx.v2"
@@ -41,7 +39,7 @@ func SelectThreadBySlugOrID(db *pgx.ConnPool, slugOrID string, t *models.Thread)
 func SelectThreadByID(db *pgx.ConnPool, t *models.Thread) error {
 	err := scanThread(db.QueryRow(selectThreadByID, t.ID), t)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return ErrThreadNotFound
 	}
 
@@ -51,7 +49,7 @@ func SelectThreadByID(db *pgx.ConnPool, t *models.Thread) error {
 func SelectThreadBySlug(db *pgx.ConnPool, t *models.Thread) error {
 	err := scanThread(db.QueryRow(selectThreadBySlug, t.Slug), t)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return ErrThreadNotFound
 	}
 
@@ -61,7 +59,7 @@ func SelectThreadBySlug(db *pgx.ConnPool, t *models.Thread) error {
 func SelectThreadIDBySlug(db *pgx.ConnPool, slug string) (int, error) {
 	id := -1
 	err := db.QueryRow(selectThreadIDBySlug, slug).Scan(&id)
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return 0, ErrThreadNotFound
 	}
 	return id, err
@@ -142,7 +140,7 @@ func SelectAllThreadsByForum(db *pgx.ConnPool, slug string, limit *int32, desc *
 	var err error
 	if desc != nil && *desc == true {
 		if limit != nil && since != nil {
-			rows, err = db.Query(selectAllThreadsSinceLimitDesc, slug, since, limit)
+			rows, err = db.Query(selectAllThreadsSinceLimitDesc, slug, dateTimeToString(since), limit)
 		} else if limit != nil {
 			rows, err = db.Query(selectAllThreadsLimitDesc, slug, limit)
 		} else if since != nil {
@@ -152,11 +150,11 @@ func SelectAllThreadsByForum(db *pgx.ConnPool, slug string, limit *int32, desc *
 		}
 	} else {
 		if limit != nil && since != nil {
-			rows, err = db.Query(selectAllThreadsSinceLimit, slug, since, limit)
+			rows, err = db.Query(selectAllThreadsSinceLimit, slug, dateTimeToString(since), limit)
 		} else if limit != nil {
 			rows, err = db.Query(selectAllThreadsLimit, slug, limit)
 		} else if since != nil {
-			rows, err = db.Query(selectAllThreadsSince, slug, since)
+			rows, err = db.Query(selectAllThreadsSince, slug, dateTimeToString(since))
 		} else {
 			rows, err = db.Query(selectAllThreads, slug)
 		}

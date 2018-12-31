@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	"github.com/go-openapi/strfmt"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
 
@@ -67,10 +68,12 @@ const (
 func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
+	created := pgx.NullTime{}
+	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumUserThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -84,7 +87,7 @@ func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error 
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&pf.Thread.Created,
+		&createdThread,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
@@ -94,6 +97,10 @@ func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error 
 		&pf.Author.About,
 		&pf.Author.Email,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
@@ -107,7 +114,31 @@ func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error 
 		pf.Thread.Slug = ""
 	}
 
-	return err
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Thread.Created = nil
+			return err
+		} else {
+			pf.Thread.Created = &date
+		}
+	} else {
+		pf.Thread.Created = nil
+	}
+
+	return nil
 }
 
 const (
@@ -124,10 +155,12 @@ const (
 func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
+	created := pgx.NullTime{}
+	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithUserThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -136,7 +169,7 @@ func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&pf.Thread.Created,
+		&createdThread,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
@@ -146,6 +179,10 @@ func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Author.About,
 		&pf.Author.Email,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
@@ -159,7 +196,31 @@ func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		pf.Thread.Slug = ""
 	}
 
-	return err
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Thread.Created = nil
+			return err
+		} else {
+			pf.Thread.Created = &date
+		}
+	} else {
+		pf.Thread.Created = nil
+	}
+
+	return nil
 }
 
 const (
@@ -176,10 +237,12 @@ const (
 func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
+	created := pgx.NullTime{}
+	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -193,12 +256,16 @@ func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&pf.Thread.Created,
+		&createdThread,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
 		&pf.Thread.Votes,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
@@ -212,7 +279,31 @@ func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		pf.Thread.Slug = ""
 	}
 
-	return err
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Thread.Created = nil
+			return err
+		} else {
+			pf.Thread.Created = &date
+		}
+	} else {
+		pf.Thread.Created = nil
+	}
+
+	return nil
 }
 
 const (
@@ -228,10 +319,11 @@ const (
 
 func selectPostWithForumUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
+	created := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumUserQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -248,13 +340,29 @@ func selectPostWithForumUser(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Author.Email,
 	)
 
+	if err != nil {
+		return err
+	}
+
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
 	} else {
 		pf.Post.Parent = 0
 	}
 
-	return err
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+
+	return nil
 }
 
 const (
@@ -269,10 +377,12 @@ const (
 func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
+	created := pgx.NullTime{}
+	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -281,12 +391,16 @@ func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&pf.Thread.Created,
+		&createdThread,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
 		&pf.Thread.Votes,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
@@ -300,7 +414,31 @@ func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		pf.Thread.Slug = ""
 	}
 
-	return err
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Thread.Created = nil
+			return err
+		} else {
+			pf.Thread.Created = &date
+		}
+	} else {
+		pf.Thread.Created = nil
+	}
+
+	return nil
 }
 
 const (
@@ -315,10 +453,11 @@ const (
 
 func selectPostWithForum(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
+	created := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -331,12 +470,28 @@ func selectPostWithForum(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Forum.Posts,
 	)
 
+	if err != nil {
+		return err
+	}
+
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
 	} else {
 		pf.Post.Parent = 0
 	}
-	return err
+
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+	return nil
 }
 
 const (
@@ -350,10 +505,11 @@ const (
 
 func selectPostWithUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
+	created := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithUserQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&pf.Post.Created,
+		&created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -365,13 +521,29 @@ func selectPostWithUser(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Author.Email,
 	)
 
+	if err != nil {
+		return err
+	}
+
 	if parent.Valid {
 		pf.Post.Parent = parent.Int64
 	} else {
 		pf.Post.Parent = 0
 	}
 
-	return err
+	if created.Valid {
+		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
+		if err != nil {
+			pf.Post.Created = nil
+			return err
+		} else {
+			pf.Post.Created = &date
+		}
+	} else {
+		pf.Post.Created = nil
+	}
+
+	return nil
 }
 
 const (

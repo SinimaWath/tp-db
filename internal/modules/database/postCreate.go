@@ -51,6 +51,7 @@ func PostsCreate(db *pgx.ConnPool, slugOrIDThread string, posts models.Posts) (m
 		}
 
 		if pqError, ok := err.(pgx.PgError); ok {
+			log.Println(pqError.Code)
 			switch pqError.Code {
 			case pgErrForeignKeyViolation:
 				if pqError.ConstraintName == "post_parent_id_fkey" {
@@ -107,7 +108,6 @@ func insertPostsTx(tx *pgx.Tx, threadID int, posts models.Posts, forumSlug strin
 	if queryError != nil {
 		return nil, queryError
 	}
-
 	for rows.Next() {
 		post := &models.Post{}
 		err := scanPostRows(rows, post)
@@ -117,6 +117,11 @@ func insertPostsTx(tx *pgx.Tx, threadID int, posts models.Posts, forumSlug strin
 		}
 
 		resultPosts = append(resultPosts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
 	}
 
 	rows.Close()
