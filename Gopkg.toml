@@ -80,3 +80,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/net"
+
+[[constraint]]
+  name = "gopkg.in/jackc/pgx.v2"
+  version = "2.11.0"

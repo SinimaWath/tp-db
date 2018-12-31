@@ -1,19 +1,32 @@
 package service
 
 import (
-	"database/sql"
+	"log"
 
+	"github.com/SinimaWath/tp-db/internal/models"
+	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
 	"github.com/go-openapi/runtime/middleware"
 )
 
-func (pg ForumPgsql) Clear(operations.ClearParams) middleware.Responder {
-	clear(pg.db)
-	return nil
+func (self *ForumPgsql) Clear(operations.ClearParams) middleware.Responder {
+	log.Println("[INFO] Clear")
+	err := database.Clear(self.db)
+	if err != nil {
+		log.Println("[ERROR] Clear: " + err.Error())
+		return nil
+	}
+
+	return operations.NewClearOK()
 }
 
-func clear(db *sql.DB) error {
-	query := `TRUNCATE ONLY "user", forum, thread`
-	_, err := db.Exec(query)
-	return err
+func (self *ForumPgsql) Status(params operations.StatusParams) middleware.Responder {
+	log.Println("[INFO] Status")
+	status := &models.Status{}
+	err := database.Status(self.db, status)
+	if err != nil {
+		log.Println("[ERROR] Status: " + err.Error())
+		return nil
+	}
+	return operations.NewStatusOK().WithPayload(status)
 }

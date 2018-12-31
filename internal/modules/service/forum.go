@@ -1,90 +1,81 @@
 package service
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
 	"github.com/go-openapi/runtime/middleware"
-	pq "github.com/lib/pq"
 )
 
-func (pg ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware.Responder {
-	err := insertForum(pg.db, params.Forum.User, params.Forum.Slug, params.Forum.Title)
-
-	if err == errForeignKeyViolation {
-		responseError := models.Error{Message: fmt.Sprintf("Can't find user with nickname: %v", params.Forum.User)}
-		return operations.NewForumCreateNotFound().WithPayload(&responseError)
-	} else if err == errUniqueViolation {
-		forum := &models.Forum{}
-		if err := selectForum(pg.db, params.Forum.Slug, forum); err != nil {
-			log.Println(err)
+func (self ForumPgsql) ForumCreate(params operations.ForumCreateParams) middleware.Responder {
+	log.Println("[INFO] ForumCreate")
+	err := database.CreateForum(self.db, params.Forum)
+	if err != nil {
+		switch err {
+		case database.ErrForumNotFound:
+			return operations.NewForumCreateNotFound().WithPayload(&models.Error{})
+		case database.ErrForumConflict:
+			err := database.SelectForum(self.db, params.Forum)
+			if err != nil {
+				log.Println("[ERROR] ForumCreate: " + err.Error())
+				return nil
+			}
+			return operations.NewForumCreateConflict().WithPayload(params.Forum)
+		default:
+			log.Println("[ERROR] ForumCreate: " + err.Error())
 			return nil
 		}
-		return operations.NewForumCreateConflict().WithPayload(forum)
 	}
 
+	return operations.NewForumCreateCreated().WithPayload(params.Forum)
+}
+
+func (self *ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware.Responder {
+	log.Println("[INFO] ForumGetOne")
 	forum := &models.Forum{}
-	if err := selectForum(pg.db, params.Forum.Slug, forum); err != nil {
-		log.Println(err)
+	forum.Slug = params.Slug
+	err := database.SelectForum(self.db, forum)
+	if err != nil {
+		if err == database.ErrForumNotFound {
+			return operations.NewForumGetOneNotFound().WithPayload(&models.Error{})
+		}
+		log.Println("[ERROR] ForumGetOne: " + err.Error())
 		return nil
 	}
-	return operations.NewForumCreateCreated().WithPayload(forum)
+
+	return operations.NewForumGetOneOK().WithPayload(forum)
 }
 
-func (pg ForumPgsql) ForumGetOne(params operations.ForumGetOneParams) middleware.Responder {
-	forum := &models.Forum{}
-	err := selectForum(pg.db, params.Slug, forum)
-	switch err {
-	case errNotFound:
-		responseError := models.Error{"Can't find user"}
-		return operations.NewForumGetOneNotFound().WithPayload(&responseError)
-	case nil:
-		return operations.NewForumGetOneOK().WithPayload(forum)
-	default:
-		log.Println(err)
+func (self *ForumPgsql) ForumGetThreads(params operations.ForumGetThreadsParams) middleware.Responder {
+	log.Println("[INFO] ForumGetThreads")
+	threads := &models.Threads{}
+	err := database.SelectAllThreadsByForum(self.db, params.Slug, params.Limit,
+		params.Desc, params.Since, threads)
+
+	if err != nil {
+		if err == database.ErrForumNotFound {
+			return operations.NewForumGetThreadsNotFound().WithPayload(&models.Error{})
+		}
+		log.Println("[ERROR] ForumGetThreads: " + err.Error())
 		return nil
 	}
+	return operations.NewForumGetThreadsOK().WithPayload(*threads)
 }
 
-func insertForum(db *sql.DB, user, slug, title string) error {
-	queryInsert := `INSERT INTO forum (user_nick, slug, title) VALUES ($1, $2, $3)`
-	_, err := db.Exec(queryInsert, user, slug, title)
-	if err, ok := err.(*pq.Error); ok && err != nil {
-		if err.Code == pgErrCodeUniqueViolation {
-			return errUniqueViolation
-		} else if err.Code == pgErrForeignKeyViolation {
-			return errForeignKeyViolation
+func (self *ForumPgsql) ForumGetUsers(params operations.ForumGetUsersParams) middleware.Responder {
+	log.Println("[INFO] ForumGetUsers")
+	users := &models.Users{}
+	err := database.SelectAllUsersByForum(self.db, params.Slug, params.Limit,
+		params.Desc, params.Since, users)
+
+	if err != nil {
+		if err == database.ErrForumNotFound {
+			return operations.NewForumGetUsersNotFound().WithPayload(&models.Error{})
 		}
-		return err
-	} else if err != nil {
-		return err
+		log.Println("[ERROR] ForumGetUsers: " + err.Error())
+		return nil
 	}
-
-	return nil
-}
-
-func checkForumExist(db *sql.DB, slug string) bool {
-	querySelect := `SELECT EXISTS(SELECT 1 FROM forum where slug = $1)`
-	row := db.QueryRow(querySelect, slug)
-	isExist := false
-	row.Scan(&isExist)
-	return isExist
-}
-
-func selectForum(db *sql.DB, slug string, forum *models.Forum) error {
-	querySelect := `SELECT u.nickname, f.slug, f.title FROM forum f JOIN "user" u ON u.nickname = f.user_nick WHERE slug = $1`
-
-	row := db.QueryRow(querySelect, slug)
-
-	if err := row.Scan(&forum.User, &forum.Slug, &forum.Title); err != nil {
-		if err == sql.ErrNoRows {
-			return errNotFound
-		}
-		return err
-	}
-
-	return nil
+	return operations.NewForumGetUsersOK().WithPayload(*users)
 }

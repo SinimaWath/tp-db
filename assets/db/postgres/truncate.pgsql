@@ -1,1 +1,1 @@
-TRUNCATE ONLY "user", forum, thread;
+TRUNCATE ONLY "user", thread, post, forum;

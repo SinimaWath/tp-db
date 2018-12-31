@@ -32,7 +32,7 @@ download-generators:
 	git clone https://github.com/jteeuwen/go-bindata vendor/github.com/jteeuwen/go-bindata/
 
 docker-start:
-	docker build -t tp-db -f deploy/Dockerfile.golang .
+	docker build -t tp-db -f Dockerfile .
 	./deploy/runDocker.sh
 
 
