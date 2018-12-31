@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS citext;
 DROP TABLE IF EXISTS post;
 DROP TABLE IF EXISTS vote;
 DROP TABLE IF EXISTS thread;
+DROP TABLE IF EXISTS forum_user;
 DROP TABLE IF EXISTS forum;
 DROP TABLE IF EXISTS "user";
 
@@ -19,7 +20,7 @@ CREATE INDEX idx_nick_email ON "user" (email);
 CREATE INDEX idx_nick_cover ON "user" (about, email, fullname, nickname);
 
 CREATE TABLE forum (
-  user_nick   citext references "user",
+  user_nick   citext references "user" not null,
   slug        citext PRIMARY KEY,
   title       text not null,
   thread_count integer default 0 not null,
@@ -28,11 +29,17 @@ CREATE TABLE forum (
 
 CREATE INDEX idx_forum_slug ON forum (slug);
 
+CREATE TABLE forum_user (
+  nickname citext references "user",
+  forum_slug citext references "forum",
+  CONSTRAINT unique_forum_user UNIQUE (nickname, forum_slug)
+);
+
 CREATE TABLE thread (
   id BIGSERIAL PRIMARY KEY,
   slug citext unique ,
-  forum_slug citext references forum,
-  user_nick citext references "user",
+  forum_slug citext references forum not null,
+  user_nick citext references "user" not null,
   created timestamp with time zone default now(),
   title text not null,
   votes integer default 0 not null,
@@ -44,7 +51,6 @@ CREATE INDEX idx_thread_slug ON thread(slug);
 CREATE INDEX idx_thread_f_slug ON thread(forum_slug);
 
 CREATE TABLE vote (
-  id BIGSERIAL PRIMARY KEY,
   nickname citext references "user",
   voice boolean not null,
   thread_id integer references thread,
