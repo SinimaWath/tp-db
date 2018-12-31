@@ -1,102 +1,70 @@
 package service
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
 	"github.com/go-openapi/runtime/middleware"
-	pq "github.com/lib/pq"
 )
 
-const (
-	queryInsertUser           = "INSERT INTO \"user\" (nickname, fullname, about, email) VALUES ($1, $2, $3, $4);"
-	querySelectUser           = `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1 OR email = $2`
-	querySelectUserByNickname = `SELECT about, email, fullname, nickname FROM "user" WHERE nickname = $1`
-)
+func (self *ForumPgsql) UserCreate(params operations.UserCreateParams) middleware.Responder {
+	log.Println("[INFO] UserCreate")
+	params.Profile.Nickname = params.Nickname
 
-func (pg ForumPgsql) UserCreate(params operations.UserCreateParams) middleware.Responder {
-
-	err := insertUser(pg.db, params.Nickname, params.Profile.Fullname, params.Profile.About, params.Profile.Email)
-
-	if err == errUniqueViolation {
-		users := &models.Users{}
-		selectErr := selectUsersByNicknameOrEmail(pg.db, users, params.Nickname, params.Profile.Email)
-		if selectErr != nil {
-			log.Println(selectErr)
+	err := database.CreateUser(self.db, params.Profile)
+	if err != nil {
+		switch err {
+		case database.ErrUserConflict:
+			users, err := database.SelectUsersWithNickOrEmail(self.db, params.Profile.Nickname, params.Profile.Email)
+			if err != nil {
+				log.Println("[ERROR] UserCreate: " + err.Error())
+				return nil
+			}
+			return operations.NewUserCreateConflict().WithPayload(users)
+		default:
+			log.Println("[ERROR] UserCreate: " + err.Error())
 			return nil
 		}
-		return operations.NewUserCreateConflict().WithPayload(*users)
-	} else if err != nil {
-		log.Println(err)
-		return nil
 	}
 
-	params.Profile.Nickname = params.Nickname
 	return operations.NewUserCreateCreated().WithPayload(params.Profile)
 }
 
-func (pg ForumPgsql) UserGetOne(params operations.UserGetOneParams) middleware.Responder {
-	log.Println("UserGetOne")
+func (self *ForumPgsql) UserGetOne(params operations.UserGetOneParams) middleware.Responder {
+	log.Println("[INFO] UserGetOne")
 	user := &models.User{}
-
-	err := selectUser(pg.db, user, params.Nickname)
-	switch err {
-	case errNotFound:
-		return operations.NewUserGetOneNotFound().WithPayload(&models.Error{})
-	case nil:
-		return operations.NewUserGetOneOK().WithPayload(user)
-	default:
-		log.Println("UserGetOne ERROR: " + err.Error())
-		return nil
-	}
-}
-
-func insertUser(db *sql.DB, nickname, fullname, about, email string) error {
-	_, err := db.Exec(queryInsertUser, nickname, fullname, about, email)
-	if err, ok := err.(*pq.Error); ok && err != nil {
-		if err.Code == pgErrCodeUniqueViolation {
-			return errUniqueViolation
-		}
-		return err
-	}
-	return nil
-}
-
-func selectUsersByNicknameOrEmail(db *sql.DB, users *models.Users, nickname, email string) error {
-	rows, err := db.Query(querySelectUser, nickname, email)
+	user.Nickname = params.Nickname
+	err := database.SelectUser(self.db, user)
 
 	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		user := &models.User{}
-		scanErr := rows.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname)
-		if scanErr != nil {
-			return scanErr
+		if err == database.ErrUserNotFound {
+			return operations.NewUserGetOneNotFound().WithPayload(&models.Error{})
 		}
-		*users = append(*users, user)
+		log.Println("[ERROR] UserGetOne: " + err.Error())
+		return nil
 	}
 
-	if rowsErr := rows.Err(); rowsErr != nil {
-		return rowsErr
-	}
-	return nil
+	return operations.NewUserGetOneOK().WithPayload(user)
 }
 
-func selectUser(db *sql.DB, user *models.User, nickname string) error {
-
-	row := db.QueryRow(querySelectUserByNickname, nickname)
-
-	if err := row.Scan(&user.About, &user.Email, &user.Fullname, &user.Nickname); err != nil {
-		if err == sql.ErrNoRows {
-			return errNotFound
+func (self *ForumPgsql) UserUpdate(params operations.UserUpdateParams) middleware.Responder {
+	log.Println("[INFO] UserUpdate")
+	user := &models.User{}
+	user.Nickname = params.Nickname
+	err := database.UpdateUser(self.db, user, params.Profile)
+	if err != nil {
+		switch err {
+		case database.ErrUserNotFound:
+			return operations.NewUserUpdateNotFound().WithPayload(&models.Error{})
+		case database.ErrUserConflict:
+			return operations.NewUserUpdateConflict().WithPayload(&models.Error{})
 		}
-		return err
+
+		log.Println("[ERROR] UserUpdate: " + err.Error())
+		return nil
 	}
 
-	return nil
+	return operations.NewUserUpdateOK().WithPayload(user)
 }

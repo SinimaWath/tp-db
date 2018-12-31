@@ -1,290 +1,60 @@
 package service
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
 	"github.com/go-openapi/runtime/middleware"
-	pq "github.com/lib/pq"
 )
 
-func (pg ForumPgsql) PostsCreate(params operations.PostsCreateParams) middleware.Responder {
-	isID := false
-	if _, err := strconv.Atoi(params.SlugOrID); err == nil {
-		isID = true
-	}
-
-	exist, ID := checkThreadExistAndGetID(pg.db, params.SlugOrID, isID)
-	if !exist {
-		return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
-	}
-
-	tx, err := pg.db.Begin()
+func (self *ForumPgsql) PostsCreate(paramas operations.PostsCreateParams) middleware.Responder {
+	log.Println("[INFO] PostsCreate")
+	posts, err := database.PostsCreate(self.db, paramas.SlugOrID, paramas.Posts)
 	if err != nil {
-		log.Println(err)
+		switch err {
+		case database.ErrThreadNotFound, database.ErrUserNotFound:
+			return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
+		case database.ErrPostConflict:
+			return operations.NewPostsCreateConflict().WithPayload(&models.Error{})
+		}
+
+		log.Println("[ERROR] PostsCreate: " + err.Error())
 		return nil
 	}
+	return operations.NewPostsCreateCreated().WithPayload(posts)
+}
 
-	var insertErr error
-	var insertedPosts *models.Posts
-
-	insertedPosts, insertErr = postsInsert(tx, params.Posts, ID, true)
-
-	if insertErr != nil {
-		log.Println(insertErr)
-		tx.Rollback()
-		if err, ok := insertErr.(*pq.Error); ok {
-			log.Printf("pqError: %#v", err)
-			if err.Code == pgErrForeignKeyViolation {
-				if err.Constraint == "post_parent_id_fkey" {
-					return operations.NewPostsCreateConflict().WithPayload(&models.Error{})
-				} else {
-					return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
-				}
-			} else {
-				if err.Column == "thread_id" {
-					return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
-				}
-			}
-			return nil
+func (self *ForumPgsql) PostUpdate(params operations.PostUpdateParams) middleware.Responder {
+	log.Println("[INFO] PostUpdate")
+	post := &models.Post{}
+	post.ID = params.ID
+	err := database.UpdatePost(self.db, post, params.Post)
+	if err != nil {
+		if err == database.ErrPostNotFound {
+			return operations.NewPostUpdateNotFound().WithPayload(&models.Error{})
 		}
+
+		log.Println("[ERROR] PostUpdate: " + err.Error())
 		return nil
 	}
+	return operations.NewPostUpdateOK().WithPayload(post)
+}
 
-	_, err = tx.Exec(updateForumPostCount, len(params.Posts), ID)
+func (self *ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Responder {
+	log.Println("[INFO] PostGetOne")
+	postFull := &models.PostFull{}
+	postFull.Post = &models.Post{}
+
+	postFull.Post.ID = params.ID
+	err := database.SelectPostFull(self.db, params.Related, postFull)
 	if err != nil {
-		log.Println(err)
-		tx.Rollback()
+		if err == database.ErrPostNotFound {
+			return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
+		}
+		log.Println("[ERROR] PostGetOne: " + err.Error())
 		return nil
 	}
-
-	tx.Commit()
-	return operations.NewPostsCreateCreated().WithPayload(*insertedPosts)
-}
-
-const updateForumPostCount = `
-UPDATE forum f SET post_count = post_count + $1
-FROM thread t
-WHERE f.slug = t.forum_slug and t.id = $2
-`
-
-const postInsertQuery = `
-	INSERT INTO post (forum_slug, author, created, message, edited, parent_id, thread_id)
-	VALUES 
-`
-
-const insertWithCheckParentID = "(SELECT (case when EXISTS(SELECT 1 from post p1 join thread t on p1.thread_id = t.id where p1.id=%v and t.id=%v) THEN %v ELSE -1 END))"
-const insertWithCheckParentIDBySLUG = "(SELECT (case when EXISTS(SELECT 1 from post p1 join thread t on p1.thread_id = t.id where p1.id=%v and t.slug='%v') THEN %v ELSE -1 END))"
-
-const postInsertEmptyToFindForeignKeyViolationsID = `INSERT INTO post (thread_id) VALUES ($1)`
-const postInsertEmptyToFindForeignKeyViolationsSlug = `INSERT INTO post (thread_id) VALUES ((select id from thread where slug = $1))`
-
-func formInsertValues(author, created, message, slugOrID string, isID bool, isEdited bool, parent int64, thread int32, placeholderStart int, valuesArgs *[]interface{}) string {
-	values := "("
-	valuesArr := []string{}
-	placeholder := placeholderStart
-	if isID {
-		valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.id = %v)`, slugOrID))
-	} else {
-		valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.slug = '%v')`, slugOrID))
-	}
-	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
-	placeholder++
-
-	if author == "" {
-		*valuesArgs = append(*valuesArgs, "NULL")
-	} else {
-		*valuesArgs = append(*valuesArgs, author)
-	}
-
-	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
-	placeholder++
-
-	if created == "" {
-		*valuesArgs = append(*valuesArgs, "now()")
-	} else {
-		*valuesArgs = append(*valuesArgs, created)
-	}
-
-	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
-	placeholder++
-
-	if message == "" {
-		*valuesArgs = append(*valuesArgs, "NULL")
-	} else {
-		*valuesArgs = append(*valuesArgs, message)
-	}
-
-	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
-	placeholder++
-
-	*valuesArgs = append(*valuesArgs, isEdited)
-
-	if parent == 0 {
-		valuesArr = append(valuesArr, fmt.Sprint("(NULL)"))
-	} else {
-		if isID {
-			valuesArr = append(valuesArr, fmt.Sprintf(insertWithCheckParentID, parent, slugOrID, parent))
-		} else {
-			valuesArr = append(valuesArr, fmt.Sprintf(insertWithCheckParentIDBySLUG, parent, slugOrID, parent))
-		}
-	}
-
-	if isID {
-		valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
-		if thread == 0 {
-			*valuesArgs = append(*valuesArgs, slugOrID)
-		} else {
-			*valuesArgs = append(*valuesArgs, thread)
-		}
-	} else {
-		valuesArr = append(valuesArr, fmt.Sprintf("(SELECT id from thread where slug = '%v')", slugOrID))
-	}
-
-	values += strings.Join(valuesArr, ", ")
-	values += ")"
-
-	return values
-}
-
-func postsInsert(db *sql.Tx, posts models.Posts, slugOrID string, isID bool) (*models.Posts, error) {
-	valuesArgsById := make([]interface{}, 0, len(posts)*6)
-	valuesArgsBySlug := make([]interface{}, 0, len(posts)*5)
-
-	finalInsertValues := strings.Builder{}
-	createdStr := ""
-	insertedPosts := &models.Posts{}
-
-	if len(posts) == 0 {
-		return insertedPosts, nil
-	}
-
-	for idx, post := range posts {
-
-		if post.Created != nil {
-			createdStr = post.Created.String()
-		} else {
-			createdStr = ""
-		}
-		insertValues := ""
-		if isID {
-			insertValues = formInsertValues(post.Author, createdStr, post.Message, slugOrID, isID,
-				post.IsEdited, post.Parent, post.Thread, idx*5+1, &valuesArgsById)
-		} else {
-			insertValues = formInsertValues(post.Author, createdStr, post.Message, slugOrID, isID,
-				post.IsEdited, post.Parent, post.Thread, idx*4+1, &valuesArgsBySlug)
-		}
-		if idx != 0 {
-			finalInsertValues.WriteString(",\n")
-		}
-		finalInsertValues.WriteString(insertValues)
-	}
-
-	finalQuery := strings.Builder{}
-	finalQuery.WriteString(postInsertQuery)
-	finalQuery.WriteString(finalInsertValues.String())
-
-	finalQuery.WriteString(" RETURNING id, author, created, edited, message, parent_id, thread_id, ")
-	finalQuery.WriteString("(select t.forum_slug from thread t where t.id = thread_id)")
-	//fmt.Println(finalQuery)
-	var rows *sql.Rows
-	var queryError error
-	if isID {
-		//fmt.Printf("Values by id: %#v\n", valuesArgsById)
-		rows, queryError = db.Query(finalQuery.String(), valuesArgsById...)
-	} else {
-		//fmt.Printf("Values by slug: %#v\n", valuesArgsBySlug)
-		rows, queryError = db.Query(finalQuery.String(), valuesArgsBySlug...)
-	}
-
-	if queryError != nil {
-		return nil, queryError
-	}
-
-	defer rows.Close()
-
-	for rows.Next() {
-		post := &models.Post{}
-		parentId := sql.NullInt64{}
-		err := rows.Scan(&post.ID, &post.Author, &post.Created,
-			&post.IsEdited, &post.Message, &parentId, &post.Thread, &post.Forum)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-
-		if parentId.Valid {
-			post.Parent = parentId.Int64
-		} else {
-			post.Parent = 0
-		}
-
-		*insertedPosts = append(*insertedPosts, post)
-
-	}
-
-	return insertedPosts, nil
-}
-
-const querySelectPostByID = `
-	SELECT p.id, p.author, p.created, p.edited, p.message, p.parent_id, p.thread_id, p.forum_slug 
-	from post p
-	where p.id = $1
-`
-
-func selectPost(db *sql.DB, id int64, post *models.Post) error {
-	row := db.QueryRow(querySelectPostByID, id)
-	parent_id := sql.NullInt64{}
-	err := row.Scan(&post.ID, &post.Author, &post.Created, &post.IsEdited,
-		&post.Message, &parent_id, &post.Thread, &post.Forum)
-	if parent_id.Valid {
-		post.Parent = parent_id.Int64
-	} else {
-		post.Parent = 0
-	}
-	return err
-}
-
-func (f ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Responder {
-	log.Println("PostGetOne")
-	post := &models.PostFull{
-		Post: &models.Post{},
-	}
-	err := selectPost(f.db, params.ID, post.Post)
-	if err != nil {
-		log.Println("PostGetOne ERROR: " + err.Error())
-		return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
-	}
-
-	for _, table := range params.Related {
-		switch table {
-		case "user":
-			post.Author = &models.User{}
-			err = selectUser(f.db, post.Author, post.Post.Author)
-			if err != nil {
-				log.Println("PostGetOne ERROR: " + err.Error())
-				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
-			}
-		case "forum":
-			post.Forum = &models.Forum{}
-			err = selectForumWithThreadsAndPosts(f.db, post.Post.Forum, post.Forum)
-			if err != nil {
-				log.Println("PostGetOne ERROR: " + err.Error())
-				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
-			}
-		case "thread":
-			post.Thread = &models.Thread{}
-			err = selectThread(f.db, strconv.Itoa(int(post.Post.Thread)), true, post.Thread)
-			if err != nil {
-				log.Println("PostGetOne ERROR: " + err.Error())
-				return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
-			}
-		}
-	}
-	return operations.NewPostGetOneOK().WithPayload(post)
+	return operations.NewPostGetOneOK().WithPayload(postFull)
 }
