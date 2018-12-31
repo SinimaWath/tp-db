@@ -17,7 +17,7 @@ CREATE TABLE "user" (
 
 CREATE INDEX idx_nick_nick ON "user" (nickname);
 CREATE INDEX idx_nick_email ON "user" (email);
-CREATE INDEX idx_nick_cover ON "user" (about, email, fullname, nickname);
+CREATE INDEX idx_nick_cover ON "user" (nickname, fullname, about, email);
 
 CREATE TABLE forum (
   user_nick   citext references "user" not null,
@@ -35,6 +35,8 @@ CREATE TABLE forum_user (
   CONSTRAINT unique_forum_user UNIQUE (nickname, forum_slug)
 );
 
+CREATE INDEX idx_forum_user ON forum_user (nickname, forum_slug);
+
 CREATE TABLE thread (
   id BIGSERIAL PRIMARY KEY,
   slug citext unique ,
@@ -48,7 +50,7 @@ CREATE TABLE thread (
 
 CREATE INDEX idx_thread_id ON thread(id);
 CREATE INDEX idx_thread_slug ON thread(slug);
-CREATE INDEX idx_thread_f_slug ON thread(forum_slug);
+CREATE INDEX idx_thread_f_slug ON thread(forum_slug, created);
 
 CREATE TABLE vote (
   nickname citext references "user",
@@ -72,7 +74,9 @@ CREATE TABLE post (
 );
 
 CREATE INDEX idx_post_id ON post(id);
-CREATE INDEX idx_post_thread_id_cr_i ON post(thread_id, created, id);
+CREATE INDEX idx_post_thread_id ON post(thread_id);
+CREATE INDEX idx_post_cr_id ON post(created, id, thread_id);
+CREATE INDEX idx_post_thread_id_cr_i ON post(thread_id, id);
 CREATE INDEX idx_post_thread_id_p_i ON post(thread_id, (path[1]), id);
 
 CREATE OR REPLACE FUNCTION change_edited_post() RETURNS trigger as $change_edited_post$
