@@ -14,11 +14,12 @@ func PostsCreate(db *sql.DB, slugOrIDThread string, posts models.Posts) (models.
 	isExist := false
 	var err error
 	threadID := 0
+	forumSlug := ""
 	if id, isID := isID(slugOrIDThread); isID {
 		threadID = id
-		isExist, err = isThreadExist(db, threadID)
+		forumSlug, isExist, err = ifThreadExistAndGetFodumSlugByID(db, threadID)
 	} else {
-		threadID, isExist, err = ifThreadExistGetID(db, slugOrIDThread)
+		forumSlug, threadID, isExist, err = ifThreadExistAndGetIDForumSlugBySlug(db, slugOrIDThread)
 	}
 	if !isExist {
 		return nil, ErrThreadNotFound
@@ -34,7 +35,16 @@ func PostsCreate(db *sql.DB, slugOrIDThread string, posts models.Posts) (models.
 		return nil, err
 	}
 
-	resultPosts, err := insertPostsTx(tx, threadID, posts)
+	_, err = tx.Exec("SET LOCAL synchronous_commit TO OFF")
+	if err != nil {
+		if txErr := tx.Rollback(); txErr != nil {
+			log.Println("[ERROR] PostsCreate tx.Rollback(): " + txErr.Error())
+			return nil, txErr
+		}
+		return nil, err
+	}
+
+	resultPosts, err := insertPostsTx(tx, threadID, posts, forumSlug)
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
 			log.Println("[ERROR] PostsCreate tx.Rollback(): " + txErr.Error())
@@ -55,14 +65,6 @@ func PostsCreate(db *sql.DB, slugOrIDThread string, posts models.Posts) (models.
 		return nil, err
 	}
 
-	err = forumUpdatePostCountByThreadID(tx, threadID, len(resultPosts))
-	if err != nil {
-		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] PostsCreate tx.Rollback(): " + txErr.Error())
-			return nil, txErr
-		}
-		return nil, err
-	}
 	if commitErr := tx.Commit(); commitErr != nil {
 		log.Println("[ERROR] PostsCreate tx.Commit(): " + commitErr.Error())
 		return nil, commitErr
@@ -89,9 +91,11 @@ const (
 	insertForumUsersEnd = `
 	ON CONFLICT ON CONSTRAINT unique_forum_user DO NOTHING
 	`
+
+	lockQuery = `SELECT * FROM forum_user FOR UPDATE`
 )
 
-func insertPostsTx(tx *sql.Tx, threadID int, posts models.Posts) (models.Posts, error) {
+func insertPostsTx(tx *sql.Tx, threadID int, posts models.Posts, forumSlug string) (models.Posts, error) {
 	resultPosts := models.Posts{}
 	if len(posts) == 0 {
 		return resultPosts, nil
@@ -99,31 +103,36 @@ func insertPostsTx(tx *sql.Tx, threadID int, posts models.Posts) (models.Posts, 
 
 	postsArgs := make([]interface{}, 0)
 	forumUserArgs := make([]interface{}, 0)
-	insertPostsQuery, insertForumUserQuery := formInsertQuery(threadID, posts, &postsArgs, &forumUserArgs)
+	insertPostsQuery, insertForumUserQuery := formInsertQuery(threadID, posts, &postsArgs, &forumUserArgs, forumSlug)
 	rows, queryError := tx.Query(*insertPostsQuery, postsArgs...)
 	if queryError != nil {
 		return nil, queryError
 	}
 
-	defer rows.Close()
-
 	for rows.Next() {
 		post := &models.Post{}
 		err := scanPostRows(rows, post)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
 
 		resultPosts = append(resultPosts, post)
 	}
 
-	_, err := tx.Exec(*insertForumUserQuery, forumUserArgs...)
+	rows.Close()
 
+	err := forumUpdatePostCountByThreadID(tx, threadID, len(resultPosts))
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tx.Exec(*insertForumUserQuery, forumUserArgs...)
 	return resultPosts, err
 }
 
 func formInsertQuery(id int, posts models.Posts,
-	postsArgs *[]interface{}, forumUserArgs *[]interface{}) (*string, *string) {
+	postsArgs *[]interface{}, forumUserArgs *[]interface{}, forumSlug string) (*string, *string) {
 
 	createdStr := ""
 	insertValues := ""
@@ -139,9 +148,9 @@ func formInsertQuery(id int, posts models.Posts,
 		}
 
 		insertValues = formInsertValuesID(post.Author, createdStr, post.Message, id,
-			post.IsEdited, post.Parent, post.Thread, idx*5+1, postsArgs)
+			post.IsEdited, post.Parent, post.Thread, idx*5+1, postsArgs, forumSlug)
 
-		insertUserValues = formInsertUserValues(post.Author, id, idx*2+1, forumUserArgs)
+		insertUserValues = formInsertUserValues(post.Author, idx*2+1, forumUserArgs, forumSlug)
 
 		if idx != 0 {
 			finalInsertValues.WriteString(",")
@@ -165,10 +174,10 @@ func formInsertQuery(id int, posts models.Posts,
 	return &resPosts, &resUser
 }
 
-func formInsertUserValues(author string, id, placeholder int, args *[]interface{}) string {
-	values := fmt.Sprintf("($%v, (SELECT t.forum_slug FROM thread t WHERE t.id = $%v))", placeholder, placeholder+1)
+func formInsertUserValues(author string, placeholder int, args *[]interface{}, forumSlug string) string {
+	values := fmt.Sprintf("($%v, $%v)", placeholder, placeholder+1)
 	*args = append(*args, author)
-	*args = append(*args, id)
+	*args = append(*args, forumSlug)
 	return values
 }
 
@@ -179,12 +188,13 @@ const insertWithCheckParentID = `(
 		THEN %v ELSE -1 END)
 	)`
 
-func formInsertValuesID(author, created, message string, ID int, isEdited bool, parent int64, thread int32, placeholderStart int, valuesArgs *[]interface{}) string {
+func formInsertValuesID(author, created, message string, ID int, isEdited bool, parent int64,
+	thread int32, placeholderStart int, valuesArgs *[]interface{}, forumSlug string) string {
 	values := "("
 	valuesArr := []string{}
 	placeholder := placeholderStart
 
-	valuesArr = append(valuesArr, fmt.Sprintf(`(SELECT t.forum_slug from thread t where t.id = %v)`, ID))
+	valuesArr = append(valuesArr, fmt.Sprintf(`'%v'`, forumSlug))
 
 	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
 	placeholder++

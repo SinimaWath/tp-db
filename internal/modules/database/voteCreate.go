@@ -35,7 +35,16 @@ func VoteCreate(db *sql.DB, slugOrId string, t *models.Thread, v *models.Vote) e
 		return err
 	}
 
-	res, err := tx.Exec(insertVote, v.Nickname, voteBool, t.ID)
+	_, err = tx.Exec("SET LOCAL synchronous_commit TO OFF")
+	if err != nil {
+		if txErr := tx.Rollback(); txErr != nil {
+			log.Println("[ERROR] VoteCreate tx.Rollback(): " + txErr.Error())
+			return txErr
+		}
+		return err
+	}
+
+	_, err = tx.Exec(insertVote, v.Nickname, voteBool, t.ID)
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
 			log.Println("[ERROR] VoteCreate tx.Rollback(): " + txErr.Error())
@@ -49,8 +58,6 @@ func VoteCreate(db *sql.DB, slugOrId string, t *models.Thread, v *models.Vote) e
 		}
 		return err
 	}
-
-	log.Println(res)
 
 	err = threadUpdateVotesCountTx(tx, t)
 	if err != nil {

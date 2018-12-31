@@ -28,6 +28,15 @@ func ThreadCreate(db *sql.DB, thread *models.Thread) error {
 		return err
 	}
 
+	_, err = tx.Exec("SET LOCAL synchronous_commit TO OFF")
+	if err != nil {
+		if txErr := tx.Rollback(); txErr != nil {
+			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
+			return txErr
+		}
+		return err
+	}
+
 	err = scanThread(tx.QueryRow(insertThread, slugToNullable(thread.Slug), thread.Author, thread.Created, thread.Forum,
 		thread.Title, thread.Message), thread)
 

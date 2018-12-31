@@ -59,11 +59,19 @@ func slugToNullable(slug string) sql.NullString {
 
 const (
 	checkThreadExistAndGetIDBySlug = `
-	SELECT id FROM thread WHERE slug = $1 
+	SELECT id FROM thread WHERE slug = $1
+	`
+
+	checkThreadExistAndGetIDForumSlugBySlug = `
+	SELECT id, forum_slug FROM thread WHERE slug = $1
+	`
+
+	checkThreadExistAndGetForumSlugByID = `
+	SELECT forum_slug FROM thread WHERE id = $1
 	`
 
 	checkThreadExistByID = `
-	SELECT FROM thread WHERE id = $1 
+	SELECT FROM thread WHERE id = $1
 	`
 )
 
@@ -88,4 +96,29 @@ func isThreadExist(db *sql.DB, id int) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func ifThreadExistAndGetFodumSlugByID(db *sql.DB, id int) (string, bool, error) {
+	forum := ""
+	err := db.QueryRow(checkThreadExistAndGetForumSlugByID, id).Scan(&forum)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return forum, false, nil
+		}
+		return forum, false, err
+	}
+	return forum, true, nil
+}
+
+func ifThreadExistAndGetIDForumSlugBySlug(db *sql.DB, slug string) (string, int, bool, error) {
+	id := -1
+	forum := ""
+	err := db.QueryRow(checkThreadExistAndGetIDForumSlugBySlug, slug).Scan(&id, &forum)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return forum, id, false, nil
+		}
+		return forum, id, false, err
+	}
+	return forum, id, true, nil
 }
