@@ -1,10 +1,8 @@
 package database
 
 import (
-	"database/sql"
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -14,7 +12,7 @@ const (
 	RETURNING id, author, created, edited, message, parent_id, thread_id, forum_slug`
 )
 
-func UpdatePost(db *sql.DB, post *models.Post, pu *models.PostUpdate) error {
+func UpdatePost(db *pgx.ConnPool, post *models.Post, pu *models.PostUpdate) error {
 	var err error
 	if pu.Message == "" {
 		err = selectPost(db, post)
@@ -23,8 +21,7 @@ func UpdatePost(db *sql.DB, post *models.Post, pu *models.PostUpdate) error {
 	}
 
 	if err != nil {
-		log.Println(err)
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return ErrPostNotFound
 		}
 		return err

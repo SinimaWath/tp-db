@@ -5,6 +5,7 @@ import (
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/go-openapi/strfmt"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 	`
 )
 
-func SelectThreadBySlugOrID(db *sql.DB, slugOrID string, t *models.Thread) error {
+func SelectThreadBySlugOrID(db *pgx.ConnPool, slugOrID string, t *models.Thread) error {
 	if id, isID := isID(slugOrID); !isID {
 		t.Slug = slugOrID
 		return SelectThreadBySlug(db, t)
@@ -37,7 +38,7 @@ func SelectThreadBySlugOrID(db *sql.DB, slugOrID string, t *models.Thread) error
 	}
 }
 
-func SelectThreadByID(db *sql.DB, t *models.Thread) error {
+func SelectThreadByID(db *pgx.ConnPool, t *models.Thread) error {
 	err := scanThread(db.QueryRow(selectThreadByID, t.ID), t)
 
 	if err == sql.ErrNoRows {
@@ -47,7 +48,7 @@ func SelectThreadByID(db *sql.DB, t *models.Thread) error {
 	return err
 }
 
-func SelectThreadBySlug(db *sql.DB, t *models.Thread) error {
+func SelectThreadBySlug(db *pgx.ConnPool, t *models.Thread) error {
 	err := scanThread(db.QueryRow(selectThreadBySlug, t.Slug), t)
 
 	if err == sql.ErrNoRows {
@@ -57,7 +58,7 @@ func SelectThreadBySlug(db *sql.DB, t *models.Thread) error {
 	return err
 }
 
-func SelectThreadIDBySlug(db *sql.DB, slug string) (int, error) {
+func SelectThreadIDBySlug(db *pgx.ConnPool, slug string) (int, error) {
 	id := -1
 	err := db.QueryRow(selectThreadIDBySlug, slug).Scan(&id)
 	if err == sql.ErrNoRows {
@@ -128,7 +129,7 @@ const (
 	`
 )
 
-func SelectAllThreadsByForum(db *sql.DB, slug string, limit *int32, desc *bool,
+func SelectAllThreadsByForum(db *pgx.ConnPool, slug string, limit *int32, desc *bool,
 	since *strfmt.DateTime, ts *models.Threads) error {
 
 	if isExist, err := checkForumExist(db, slug); err != nil {
@@ -137,7 +138,7 @@ func SelectAllThreadsByForum(db *sql.DB, slug string, limit *int32, desc *bool,
 		return ErrForumNotFound
 	}
 
-	var rows *sql.Rows
+	var rows *pgx.Rows
 	var err error
 	if desc != nil && *desc == true {
 		if limit != nil && since != nil {

@@ -1,11 +1,10 @@
 package database
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/lib/pq"
+	"gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -20,7 +19,7 @@ const (
 	`
 )
 
-func ThreadCreate(db *sql.DB, thread *models.Thread) error {
+func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -37,15 +36,17 @@ func ThreadCreate(db *sql.DB, thread *models.Thread) error {
 		return err
 	}
 
-	err = scanThread(tx.QueryRow(insertThread, slugToNullable(thread.Slug), thread.Author, thread.Created, thread.Forum,
+	err = scanThread(tx.QueryRow(insertThread, slugToNullable(thread.Slug), thread.Author,
+		dateTimeToString(thread.Created), thread.Forum,
 		thread.Title, thread.Message), thread)
 
 	if err != nil {
+		log.Println(err)
 		if txErr := tx.Rollback(); txErr != nil {
 			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
-		if err, ok := err.(*pq.Error); ok {
+		if err, ok := err.(pgx.PgError); ok {
 			switch err.Code {
 			case pgErrCodeNotNullViolation, pgErrForeignKeyViolation:
 				return ErrThreadNotFoundAuthorOrForum
@@ -55,32 +56,34 @@ func ThreadCreate(db *sql.DB, thread *models.Thread) error {
 					log.Println("[ERROR] ThreadCreate pgErrCodeUniqueViolation: " + err.Error())
 					return err
 				}
-
 				return ErrThreadConflict
+			case "25P02":
+				log.Println(err)
 			}
 		}
 		return err
 	}
 
-	err = forumUpdateThreadCount(tx, thread.Forum)
+	/*	err = forumUpdateThreadCount(tx, thread.Forum)
 
-	if err != nil {
-		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
-			return txErr
-		}
-		return err
-	}
+		if err != nil {
+			if txErr := tx.Rollback(); txErr != nil {
+				log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
+				return txErr
+			}
+			return err
+		}*/
 
-	err = createForumUserTx(tx, thread.Author, thread.Forum)
+	/*	err = createForumUserTx(tx, thread.Author, thread.Forum)
 
-	if err != nil {
-		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
-			return txErr
-		}
-		return err
-	}
+		if err != nil {
+
+			if txErr := tx.Rollback(); txErr != nil {
+				log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
+				return txErr
+			}
+			return err
+		}*/
 
 	if commitErr := tx.Commit(); commitErr != nil {
 		log.Println("[ERROR] ThreadCreate tx.Commit(): " + commitErr.Error())

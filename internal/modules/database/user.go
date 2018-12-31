@@ -1,10 +1,10 @@
 package database
 
 import (
-	"database/sql"
 	"errors"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 var (
@@ -13,7 +13,7 @@ var (
 )
 
 // Последовательность Nickname Fullname About Email
-func scanUser(r *sql.Row, user *models.User) error {
+func scanUser(r *pgx.Row, user *models.User) error {
 	return r.Scan(
 		&user.Nickname,
 		&user.Fullname,
@@ -23,7 +23,7 @@ func scanUser(r *sql.Row, user *models.User) error {
 }
 
 // Последовательность Nickname Fullname About Email
-func scanUserRows(r *sql.Rows, user *models.User) error {
+func scanUserRows(r *pgx.Rows, user *models.User) error {
 	return r.Scan(
 		&user.Nickname,
 		&user.Fullname,

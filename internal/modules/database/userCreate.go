@@ -1,10 +1,10 @@
 package database
 
 import (
-	"database/sql"
+	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/lib/pq"
+	"gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 	`
 )
 
-func CreateUser(db *sql.DB, user *models.User) error {
+func CreateUser(db *pgx.ConnPool, user *models.User) error {
 	err := scanUser(db.QueryRow(
 		createUser,
 		user.Nickname,
@@ -31,7 +31,8 @@ func CreateUser(db *sql.DB, user *models.User) error {
 	), user)
 
 	if err != nil {
-		if pqError, ok := err.(*pq.Error); ok && pqError != nil {
+		if pqError, ok := err.(pgx.PgError); ok {
+			log.Println(pqError.Code)
 			switch pqError.Code {
 			case pgErrCodeUniqueViolation:
 				return ErrUserConflict
@@ -42,7 +43,7 @@ func CreateUser(db *sql.DB, user *models.User) error {
 	return nil
 }
 
-func createForumUserTx(tx *sql.Tx, author, forum string) error {
+func createForumUserTx(tx *pgx.Tx, author, forum string) error {
 	_, err := tx.Exec(createForumUserQuery, author, forum)
 	return err
 }

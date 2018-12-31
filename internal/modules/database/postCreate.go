@@ -1,16 +1,15 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strings"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/lib/pq"
+	"gopkg.in/jackc/pgx.v2"
 )
 
-func PostsCreate(db *sql.DB, slugOrIDThread string, posts models.Posts) (models.Posts, error) {
+func PostsCreate(db *pgx.ConnPool, slugOrIDThread string, posts models.Posts) (models.Posts, error) {
 	isExist := false
 	var err error
 	threadID := 0
@@ -51,13 +50,13 @@ func PostsCreate(db *sql.DB, slugOrIDThread string, posts models.Posts) (models.
 			return nil, txErr
 		}
 
-		if pqError, ok := err.(*pq.Error); ok && pqError != nil {
+		if pqError, ok := err.(pgx.PgError); ok {
 			switch pqError.Code {
 			case pgErrForeignKeyViolation:
-				if pqError.Constraint == "post_parent_id_fkey" {
+				if pqError.ConstraintName == "post_parent_id_fkey" {
 					return nil, ErrPostConflict
 				}
-				if pqError.Constraint == "post_author_fkey" {
+				if pqError.ConstraintName == "post_author_fkey" {
 					return nil, ErrUserNotFound
 				}
 			}
@@ -95,7 +94,7 @@ const (
 	lockQuery = `SELECT * FROM forum_user FOR UPDATE`
 )
 
-func insertPostsTx(tx *sql.Tx, threadID int, posts models.Posts, forumSlug string) (models.Posts, error) {
+func insertPostsTx(tx *pgx.Tx, threadID int, posts models.Posts, forumSlug string) (models.Posts, error) {
 	resultPosts := models.Posts{}
 	if len(posts) == 0 {
 		return resultPosts, nil

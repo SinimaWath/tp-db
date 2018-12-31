@@ -1,10 +1,10 @@
 package database
 
 import (
-	"database/sql"
 	"errors"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 var (
@@ -12,7 +12,7 @@ var (
 	ErrForumNotFound = errors.New("ForumN")
 )
 
-func scanForum(r *sql.Row, f *models.Forum) error {
+func scanForum(r *pgx.Row, f *models.Forum) error {
 	return r.Scan(
 		&f.User,
 		&f.Slug,
@@ -26,10 +26,10 @@ const (
 	checkForumExistQuery = `SELECT FROM forum WHERE slug = $1`
 )
 
-func checkForumExist(db *sql.DB, slug string) (bool, error) {
+func checkForumExist(db *pgx.ConnPool, slug string) (bool, error) {
 	err := db.QueryRow(checkForumExistQuery, slug).Scan()
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return false, nil
 		}
 		return false, err

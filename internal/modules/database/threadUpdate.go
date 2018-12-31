@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -48,8 +49,8 @@ const (
 	`
 )
 
-func UpdateThread(db *sql.DB, tu *models.ThreadUpdate, slugOrID string, t *models.Thread) error {
-	var row *sql.Row
+func UpdateThread(db *pgx.ConnPool, tu *models.ThreadUpdate, slugOrID string, t *models.Thread) error {
+	var row *pgx.Row
 	if id, isID := isID(slugOrID); !isID {
 		t.Slug = slugOrID
 		row = updateThreadBySlug(db, tu, t.Slug)
@@ -75,8 +76,8 @@ func UpdateThread(db *sql.DB, tu *models.ThreadUpdate, slugOrID string, t *model
 	return nil
 }
 
-func updateThreadBySlug(db *sql.DB, tu *models.ThreadUpdate, slug string) *sql.Row {
-	var row *sql.Row
+func updateThreadBySlug(db *pgx.ConnPool, tu *models.ThreadUpdate, slug string) *pgx.Row {
+	var row *pgx.Row
 	if tu.Message != "" && tu.Title != "" {
 		row = db.QueryRow(
 			threadUpdateFullBySlug,
@@ -103,8 +104,8 @@ func updateThreadBySlug(db *sql.DB, tu *models.ThreadUpdate, slug string) *sql.R
 	return row
 }
 
-func updateThreadByID(db *sql.DB, tu *models.ThreadUpdate, id int32) *sql.Row {
-	var row *sql.Row
+func updateThreadByID(db *pgx.ConnPool, tu *models.ThreadUpdate, id int32) *pgx.Row {
+	var row *pgx.Row
 	if tu.Message != "" && tu.Title != "" {
 		row = db.QueryRow(
 			threadUpdateFullByID,
@@ -131,10 +132,10 @@ func updateThreadByID(db *sql.DB, tu *models.ThreadUpdate, id int32) *sql.Row {
 	return row
 }
 
-func threadUpdateVotesCount(db *sql.DB, t *models.Thread) error {
+func threadUpdateVotesCount(db *pgx.ConnPool, t *models.Thread) error {
 	return scanThread(db.QueryRow(threadUpdateVotesCountQuery, t.ID, t.ID), t)
 }
 
-func threadUpdateVotesCountTx(tx *sql.Tx, t *models.Thread) error {
+func threadUpdateVotesCountTx(tx *pgx.Tx, t *models.Thread) error {
 	return scanThread(tx.QueryRow(threadUpdateVotesCountQuery, t.ID, t.ID), t)
 }

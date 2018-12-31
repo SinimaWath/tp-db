@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 var (
@@ -13,7 +14,7 @@ var (
 )
 
 // id, author, created, edited, message, parent_id, thread_id, forum_slug
-func scanPostRows(r *sql.Rows, post *models.Post) error {
+func scanPostRows(r *pgx.Rows, post *models.Post) error {
 	parent := sql.NullInt64{}
 	err := r.Scan(&post.ID, &post.Author, &post.Created, &post.IsEdited,
 		&post.Message, &parent, &post.Thread, &post.Forum)
@@ -27,7 +28,7 @@ func scanPostRows(r *sql.Rows, post *models.Post) error {
 	return err
 }
 
-func scanPost(r *sql.Row, post *models.Post) error {
+func scanPost(r *pgx.Row, post *models.Post) error {
 	parent := sql.NullInt64{}
 	err := r.Scan(&post.ID, &post.Author, &post.Created, &post.IsEdited,
 		&post.Message, &parent, &post.Thread, &post.Forum)

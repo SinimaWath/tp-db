@@ -4,8 +4,11 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	"github.com/go-openapi/strfmt"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 var (
@@ -15,23 +18,39 @@ var (
 )
 
 // Последовательность id, slug, user_nick, created, forum_slug, title, message, votes
-func scanThread(r *sql.Row, t *models.Thread) error {
+func scanThread(r *pgx.Row, t *models.Thread) error {
 	slug := sql.NullString{}
+	created := time.Time{}
+	err := r.Scan(&t.ID, &slug, &t.Author, &created, &t.Forum, &t.Title, &t.Message, &t.Votes)
+
+	if slug.Valid {
+		t.Slug = slug.String
+	}
+
+	date, err := strfmt.ParseDateTime(created.Format(strfmt.MarshalFormat))
+	if err != nil {
+		t.Created = nil
+	} else {
+		t.Created = &date
+	}
+
+	return err
+}
+
+func scanThreadRows(r *pgx.Rows, t *models.Thread) error {
+	slug := sql.NullString{}
+	created := time.Time{}
 	err := r.Scan(&t.ID, &slug, &t.Author, &t.Created, &t.Forum, &t.Title, &t.Message, &t.Votes)
 
 	if slug.Valid {
 		t.Slug = slug.String
 	}
 
-	return err
-}
-
-func scanThreadRows(r *sql.Rows, t *models.Thread) error {
-	slug := sql.NullString{}
-	err := r.Scan(&t.ID, &slug, &t.Author, &t.Created, &t.Forum, &t.Title, &t.Message, &t.Votes)
-
-	if slug.Valid {
-		t.Slug = slug.String
+	date, err := strfmt.ParseDateTime(created.Format(strfmt.MarshalFormat))
+	if err != nil {
+		t.Created = nil
+	} else {
+		t.Created = &date
 	}
 
 	return err
@@ -75,11 +94,11 @@ const (
 	`
 )
 
-func ifThreadExistGetID(db *sql.DB, slug string) (int, bool, error) {
+func ifThreadExistGetID(db *pgx.ConnPool, slug string) (int, bool, error) {
 	id := -1
 	err := db.QueryRow(checkThreadExistAndGetIDBySlug, slug).Scan(&id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return id, false, nil
 		}
 		return id, false, err
@@ -87,10 +106,10 @@ func ifThreadExistGetID(db *sql.DB, slug string) (int, bool, error) {
 	return id, true, nil
 }
 
-func isThreadExist(db *sql.DB, id int) (bool, error) {
+func isThreadExist(db *pgx.ConnPool, id int) (bool, error) {
 	err := db.QueryRow(checkThreadExistByID, id).Scan()
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return false, nil
 		}
 		return false, err
@@ -98,11 +117,11 @@ func isThreadExist(db *sql.DB, id int) (bool, error) {
 	return true, nil
 }
 
-func ifThreadExistAndGetFodumSlugByID(db *sql.DB, id int) (string, bool, error) {
+func ifThreadExistAndGetFodumSlugByID(db *pgx.ConnPool, id int) (string, bool, error) {
 	forum := ""
 	err := db.QueryRow(checkThreadExistAndGetForumSlugByID, id).Scan(&forum)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return forum, false, nil
 		}
 		return forum, false, err
@@ -110,15 +129,28 @@ func ifThreadExistAndGetFodumSlugByID(db *sql.DB, id int) (string, bool, error) 
 	return forum, true, nil
 }
 
-func ifThreadExistAndGetIDForumSlugBySlug(db *sql.DB, slug string) (string, int, bool, error) {
+func ifThreadExistAndGetIDForumSlugBySlug(db *pgx.ConnPool, slug string) (string, int, bool, error) {
 	id := -1
 	forum := ""
 	err := db.QueryRow(checkThreadExistAndGetIDForumSlugBySlug, slug).Scan(&id, &forum)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return forum, id, false, nil
 		}
 		return forum, id, false, err
 	}
 	return forum, id, true, nil
+}
+
+func dateTimeToString(date *strfmt.DateTime) pgx.NullString {
+	time := pgx.NullString{}
+	if date != nil {
+		time.String = date.String()
+		time.Valid = true
+	} else {
+		time.String = ""
+		time.Valid = false
+	}
+
+	return time
 }

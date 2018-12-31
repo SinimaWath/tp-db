@@ -4,9 +4,10 @@ import (
 	"database/sql"
 
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
-func SelectPostFull(db *sql.DB, related []string, pf *models.PostFull) error {
+func SelectPostFull(db *pgx.ConnPool, related []string, pf *models.PostFull) error {
 	isIncludeUser, isIncludeForum, isIncludeThread := false, false, false
 	for _, rel := range related {
 		switch rel {
@@ -42,7 +43,7 @@ func SelectPostFull(db *sql.DB, related []string, pf *models.PostFull) error {
 	}
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			return ErrPostNotFound
 		}
 		return err
@@ -63,7 +64,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithForumUserThread(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
 	err := db.QueryRow(selectPostWithForumUserThreadQuery, pf.Post.ID).Scan(
@@ -120,7 +121,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithUserThread(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
 	err := db.QueryRow(selectPostWithUserThreadQuery, pf.Post.ID).Scan(
@@ -172,7 +173,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithForumThread(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
 	err := db.QueryRow(selectPostWithForumThreadQuery, pf.Post.ID).Scan(
@@ -225,7 +226,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithForumUser(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithForumUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	err := db.QueryRow(selectPostWithForumUserQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
@@ -265,7 +266,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithThread(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
 	err := db.QueryRow(selectPostWithThreadQuery, pf.Post.ID).Scan(
@@ -312,7 +313,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithForum(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithForum(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	err := db.QueryRow(selectPostWithForumQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
@@ -347,7 +348,7 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPostWithUser(db *sql.DB, pf *models.PostFull) error {
+func selectPostWithUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	err := db.QueryRow(selectPostWithUserQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
@@ -380,11 +381,11 @@ const (
 	WHERE p.id = $1`
 )
 
-func selectPost(db *sql.DB, pf *models.Post) error {
+func selectPost(db *pgx.ConnPool, pf *models.Post) error {
 	return scanPost(db.QueryRow(selectPostQuery, pf.ID), pf)
 }
 
-func SelectAllPostsByThread(db *sql.DB, slugOrIDThread string, limit *int32, desc *bool,
+func SelectAllPostsByThread(db *pgx.ConnPool, slugOrIDThread string, limit *int32, desc *bool,
 	since *int64, sort *string, posts *models.Posts) error {
 
 	isExist := false
@@ -523,7 +524,7 @@ const selectPostsParentTreeLimitSinceDescByID = `
 	ORDER BY p.path[1] DESC, p.path[2:]
 `
 
-func selectAllPostsByThreadID(db *sql.DB, id int, limit *int32, desc *bool,
+func selectAllPostsByThreadID(db *pgx.ConnPool, id int, limit *int32, desc *bool,
 	since *int64, sort *string, posts *models.Posts) error {
 
 	rows, err := doQuery(db, id, limit, desc, since, sort)
@@ -545,9 +546,9 @@ func selectAllPostsByThreadID(db *sql.DB, id int, limit *int32, desc *bool,
 	return nil
 }
 
-func doQuery(db *sql.DB, id int, limit *int32, desc *bool,
-	since *int64, sort *string) (*sql.Rows, error) {
-	var rows *sql.Rows
+func doQuery(db *pgx.ConnPool, id int, limit *int32, desc *bool,
+	since *int64, sort *string) (*pgx.Rows, error) {
+	var rows *pgx.Rows
 	var err error
 	switch *sort {
 	case "flat":

@@ -1,9 +1,8 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/SinimaWath/tp-db/internal/models"
+	pgx "gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -20,16 +19,16 @@ const (
 	`
 )
 
-func SelectUser(db *sql.DB, user *models.User) error {
+func SelectUser(db *pgx.ConnPool, user *models.User) error {
 	err := scanUser(db.QueryRow(selectUser, user.Nickname), user)
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return ErrUserNotFound
 	}
 
 	return err
 }
 
-func SelectUsersWithNickOrEmail(db *sql.DB, nick, email string) (models.Users, error) {
+func SelectUsersWithNickOrEmail(db *pgx.ConnPool, nick, email string) (models.Users, error) {
 	rows, err := db.Query(selectUsersWithNickOrEmail, nick, email)
 	if err != nil {
 		return nil, err
@@ -113,7 +112,7 @@ const (
 	ORDER BY u.nickname DESC`
 )
 
-func SelectAllUsersByForum(db *sql.DB, slug string, limit *int32, desc *bool, since *string,
+func SelectAllUsersByForum(db *pgx.ConnPool, slug string, limit *int32, desc *bool, since *string,
 	users *models.Users) error {
 
 	if isExist, err := checkForumExist(db, slug); err != nil {
@@ -122,7 +121,7 @@ func SelectAllUsersByForum(db *sql.DB, slug string, limit *int32, desc *bool, si
 		return ErrForumNotFound
 	}
 
-	var rows *sql.Rows
+	var rows *pgx.Rows
 	var err error
 	if desc != nil && *desc == true {
 		if since != nil && limit != nil {

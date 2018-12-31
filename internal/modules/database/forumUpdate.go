@@ -1,6 +1,6 @@
 package database
 
-import "database/sql"
+import pgx "gopkg.in/jackc/pgx.v2"
 
 const (
 	updateForumThreadCount = `
@@ -13,12 +13,12 @@ const (
 	WHERE t.forum_slug = f.slug AND t.id = $2`
 )
 
-func forumUpdateThreadCount(tx *sql.Tx, forumSlug string) error {
+func forumUpdateThreadCount(tx *pgx.Tx, forumSlug string) error {
 	_, err := tx.Exec(updateForumThreadCount, forumSlug)
 	return err
 }
 
-func forumUpdatePostCountByThreadID(tx *sql.Tx, threadID int, postsCount int) error {
+func forumUpdatePostCountByThreadID(tx *pgx.Tx, threadID int, postsCount int) error {
 	_, err := tx.Exec(updateForumPostCountByThreadID, postsCount, threadID)
 	return err
 }

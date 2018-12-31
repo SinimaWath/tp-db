@@ -1,11 +1,10 @@
 package database
 
 import (
-	"database/sql"
 	"log"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/lib/pq"
+	"gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -16,7 +15,7 @@ const (
 	DO UPDATE SET voice = EXCLUDED.voice;`
 )
 
-func VoteCreate(db *sql.DB, slugOrId string, t *models.Thread, v *models.Vote) error {
+func VoteCreate(db *pgx.ConnPool, slugOrId string, t *models.Thread, v *models.Vote) error {
 
 	if id, isID := isID(slugOrId); !isID {
 		threadID, err := SelectThreadIDBySlug(db, slugOrId)
@@ -50,7 +49,7 @@ func VoteCreate(db *sql.DB, slugOrId string, t *models.Thread, v *models.Vote) e
 			log.Println("[ERROR] VoteCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
-		if pqError, ok := err.(*pq.Error); ok && pqError != nil {
+		if pqError, ok := err.(pgx.PgError); ok {
 			switch pqError.Code {
 			case pgErrForeignKeyViolation:
 				return ErrThreadNotFound

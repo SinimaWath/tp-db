@@ -1,8 +1,9 @@
 package service
 
 import (
-	"database/sql"
 	"log"
+
+	"gopkg.in/jackc/pgx.v2"
 )
 
 const postgres = "postgres"
@@ -13,15 +14,23 @@ const (
 )
 
 type ForumPgsql struct {
-	db *sql.DB
+	db *pgx.ConnPool
 }
 
-func NewForumPgsql(dsn string) *ForumPgsql {
-	db, err := sql.Open(postgres, dsn)
+func NewForumPgsql(config *pgx.ConnConfig) *ForumPgsql {
+	poolConfig := pgx.ConnPoolConfig{
+		ConnConfig:     *config,
+		MaxConnections: 8,
+		AfterConnect:   nil,
+		AcquireTimeout: 0,
+	}
+	log.Println(*config)
+	p, err := pgx.NewConnPool(poolConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	return &ForumPgsql{
-		db: db,
+		db: p,
 	}
 }

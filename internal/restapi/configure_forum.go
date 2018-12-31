@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"gopkg.in/jackc/pgx.v2"
+
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	errors "github.com/go-openapi/errors"
 	runtime "github.com/go-openapi/runtime"
@@ -49,8 +51,13 @@ func configureAPI(api *operations.ForumAPI) http.Handler {
 	api.JSONProducer = runtime.JSONProducer()
 
 	log.Printf("configure Api")
+	log.Println(dbFlags.Database)
+	config, err := pgx.ParseConnectionString(dbFlags.Database)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	var handler service.ForumHandler = service.NewForumPgsql(dbFlags.Database)
+	var handler service.ForumHandler = service.NewForumPgsql(&config)
 	api.ClearHandler = operations.ClearHandlerFunc(handler.Clear)
 	api.ForumCreateHandler = operations.ForumCreateHandlerFunc(handler.ForumCreate)
 	api.UserCreateHandler = operations.UserCreateHandlerFunc(handler.UserCreate)

@@ -1,10 +1,8 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/lib/pq"
+	"gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -44,7 +42,7 @@ const (
 	RETURNING nickname, fullname, about, email`
 )
 
-func UpdateUser(db *sql.DB, user *models.User, us *models.UserUpdate) error {
+func UpdateUser(db *pgx.ConnPool, user *models.User, us *models.UserUpdate) error {
 	row := updateUser(db, user.Nickname, us)
 	if row == nil {
 		return SelectUser(db, user)
@@ -53,11 +51,11 @@ func UpdateUser(db *sql.DB, user *models.User, us *models.UserUpdate) error {
 	scanErr := scanUser(row, user)
 
 	if scanErr != nil {
-		if scanErr == sql.ErrNoRows {
+		if scanErr == pgx.ErrNoRows {
 			return ErrUserNotFound
 		}
 
-		if pqError, ok := scanErr.(*pq.Error); ok && pqError != nil {
+		if pqError, ok := scanErr.(pgx.PgError); ok {
 			switch pqError.Code {
 			case pgErrCodeUniqueViolation:
 				return ErrUserConflict
@@ -70,8 +68,8 @@ func UpdateUser(db *sql.DB, user *models.User, us *models.UserUpdate) error {
 	return nil
 }
 
-func updateUser(db *sql.DB, nickname string, updateUser *models.UserUpdate) *sql.Row {
-	var row *sql.Row
+func updateUser(db *pgx.ConnPool, nickname string, updateUser *models.UserUpdate) *pgx.Row {
+	var row *pgx.Row
 	if updateUser.About != "" && updateUser.Email != "" && updateUser.Fullname != "" {
 		row = db.QueryRow(
 			updateUserFull,

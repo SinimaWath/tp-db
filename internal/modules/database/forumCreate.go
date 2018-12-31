@@ -1,10 +1,8 @@
 package database
 
 import (
-	"database/sql"
-
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/lib/pq"
+	"gopkg.in/jackc/pgx.v2"
 )
 
 const (
@@ -16,7 +14,7 @@ const (
 	RETURNING user_nick, slug, title, thread_count, post_count`
 )
 
-func CreateForum(db *sql.DB, forum *models.Forum) error {
+func CreateForum(db *pgx.ConnPool, forum *models.Forum) error {
 	err := scanForum(db.QueryRow(
 		insertForum,
 		forum.User,
@@ -25,7 +23,7 @@ func CreateForum(db *sql.DB, forum *models.Forum) error {
 	), forum)
 
 	if err != nil {
-		if pqError, ok := err.(*pq.Error); ok && pqError != nil {
+		if pqError, ok := err.(pgx.PgError); ok {
 			switch pqError.Code {
 			case pgErrCodeUniqueViolation:
 				return ErrForumConflict

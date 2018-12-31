@@ -1,7 +1,7 @@
 package database
 
 import (
-	"database/sql"
+	"gopkg.in/jackc/pgx.v2"
 
 	"github.com/SinimaWath/tp-db/internal/models"
 )
@@ -14,13 +14,13 @@ const (
 	`
 )
 
-func SelectForum(db *sql.DB, forum *models.Forum) error {
+func SelectForum(db *pgx.ConnPool, forum *models.Forum) error {
 	err := scanForum(db.QueryRow(
 		selectForum,
 		forum.Slug,
 	), forum)
 
-	if err == sql.ErrNoRows {
+	if err == pgx.ErrNoRows {
 		return ErrForumNotFound
 	}
 
