@@ -59,6 +59,8 @@ USER root
 
 RUN echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/$PGVER/main/pg_hba.conf &&\
     echo "listen_addresses='*'" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "shared_buffers=256MB" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
+    echo "full_page_writes=off" >> /etc/postgresql/$PGVER/main/postgresql.conf &&\
     echo "unix_socket_directories = '/var/run/postgresql'" >> /etc/postgresql/$PGVER/main/postgresql.conf
 # Expose the PostgreSQL port
 EXPOSE 5432
