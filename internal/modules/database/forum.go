@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	ErrForumConflict = errors.New("ForumC")
-	ErrForumNotFound = errors.New("ForumN")
+	ErrForumConflict = errors.New("FC")
+	ErrForumNotFound = errors.New("FN")
 )
 
 func scanForum(r *pgx.Row, f *models.Forum) error {

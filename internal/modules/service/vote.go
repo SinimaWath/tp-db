@@ -1,15 +1,12 @@
 package service
 
 import (
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/valyala/fasthttp"
 )
 
 func (self *ForumPgsql) ThreadVote(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ThreadVote")
 	thread := &models.Thread{}
 	vote := &models.Vote{}
 
@@ -23,7 +20,6 @@ func (self *ForumPgsql) ThreadVote(ctx *fasthttp.RequestCtx) {
 			resp(ctx, Error, fasthttp.StatusNotFound)
 			return
 		}
-		log.Println("[ERROR] ThreadVote: " + err.Error())
 		resp(ctx, Error, fasthttp.StatusInternalServerError)
 		return
 	}

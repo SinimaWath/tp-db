@@ -9,7 +9,6 @@ import (
 )
 
 func (self *ForumPgsql) Clear(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] Clear")
 	err := database.Clear(self.db)
 	if err != nil {
 		return
@@ -21,7 +20,6 @@ func (self *ForumPgsql) Clear(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) Status(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] Status")
 	status := &models.Status{}
 	err := database.Status(self.db, status)
 	if err != nil {

@@ -1,16 +1,12 @@
 package service
 
 import (
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/valyala/fasthttp"
 )
 
 func (self *ForumPgsql) ThreadCreate(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ThreadCreate")
-
 	t := &models.Thread{}
 	t.UnmarshalJSON(ctx.PostBody())
 	t.Forum = ctx.UserValue("slug").(string)
@@ -25,7 +21,6 @@ func (self *ForumPgsql) ThreadCreate(ctx *fasthttp.RequestCtx) {
 			resp(ctx, t, fasthttp.StatusConflict)
 			return
 		}
-		log.Println("[ERROR] ThreadCreate: " + err.Error())
 		resp(ctx, Error, fasthttp.StatusInternalServerError)
 		return
 	}
@@ -35,7 +30,6 @@ func (self *ForumPgsql) ThreadCreate(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) ThreadGetOne(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ThreadGetOne")
 	thread := &models.Thread{}
 	err := database.SelectThreadBySlugOrID(self.db, ctx.UserValue("slug_or_id").(string),
 		thread)
@@ -53,8 +47,6 @@ func (self *ForumPgsql) ThreadGetOne(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) ThreadUpdate(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ThreadUpdate")
-
 	thread := &models.Thread{}
 	tU := &models.ThreadUpdate{}
 	tU.UnmarshalJSON(ctx.PostBody())
@@ -65,8 +57,6 @@ func (self *ForumPgsql) ThreadUpdate(ctx *fasthttp.RequestCtx) {
 			resp(ctx, Error, fasthttp.StatusNotFound)
 			return
 		}
-
-		log.Println("[ERROR] ThreadUpdate: " + err.Error())
 		resp(ctx, Error, fasthttp.StatusInternalServerError)
 		return
 	}
@@ -76,7 +66,6 @@ func (self *ForumPgsql) ThreadUpdate(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) ThreadGetPosts(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ThreadGetPosts")
 	posts := &models.Posts{}
 
 	err := database.SelectAllPostsByThread(self.db, ctx.UserValue("slug_or_id").(string),
@@ -90,7 +79,6 @@ func (self *ForumPgsql) ThreadGetPosts(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		log.Println("[ERROR] ThreadGetPosts: " + err.Error())
 		resp(ctx, Error, fasthttp.StatusInternalServerError)
 		return
 	}

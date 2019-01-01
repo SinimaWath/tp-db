@@ -9,7 +9,6 @@ import (
 )
 
 func (self ForumPgsql) ForumCreate(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ForumCreate")
 	forum := &models.Forum{}
 	err := forum.UnmarshalJSON(ctx.PostBody())
 	if err != nil {
@@ -25,14 +24,12 @@ func (self ForumPgsql) ForumCreate(ctx *fasthttp.RequestCtx) {
 		case database.ErrForumConflict:
 			err := database.SelectForum(self.db, forum)
 			if err != nil {
-				log.Println("[ERROR] ForumCreate: " + err.Error())
 				resp(ctx, Error, fasthttp.StatusInternalServerError)
 				return
 			}
 			resp(ctx, forum, fasthttp.StatusConflict)
 			return
 		default:
-			log.Println("[ERROR] ForumCreate: " + err.Error())
 			resp(ctx, Error, fasthttp.StatusInternalServerError)
 			return
 		}
@@ -42,7 +39,6 @@ func (self ForumPgsql) ForumCreate(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) ForumGetOne(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ForumGetOne")
 	forum := &models.Forum{}
 	forum.Slug = ctx.UserValue("slug").(string)
 	err := database.SelectForum(self.db, forum)
@@ -51,7 +47,6 @@ func (self *ForumPgsql) ForumGetOne(ctx *fasthttp.RequestCtx) {
 			resp(ctx, Error, fasthttp.StatusNotFound)
 			return
 		}
-		log.Println("[ERROR] ForumGetOne: " + err.Error())
 		resp(ctx, Error, fasthttp.StatusInternalServerError)
 		return
 	}
@@ -60,7 +55,6 @@ func (self *ForumPgsql) ForumGetOne(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) ForumGetThreads(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ForumGetThreads")
 	threads := &models.Threads{}
 
 	err := database.SelectAllThreadsByForum(self.db, ctx.UserValue("slug").(string),
@@ -81,7 +75,6 @@ func (self *ForumPgsql) ForumGetThreads(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) ForumGetUsers(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] ForumGetUsers")
 	users := &models.Users{}
 	err := database.SelectAllUsersByForum(self.db, ctx.UserValue("slug").(string),
 		ctx.QueryArgs().GetUintOrZero("limit"),

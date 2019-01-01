@@ -1,7 +1,6 @@
 package service
 
 import (
-	"log"
 	"strings"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -10,7 +9,6 @@ import (
 )
 
 func (self *ForumPgsql) PostsCreate(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] PostsCreate")
 
 	p := models.Posts{}
 	p.UnmarshalJSON(ctx.PostBody())
@@ -26,7 +24,6 @@ func (self *ForumPgsql) PostsCreate(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		log.Println("[ERROR] PostsCreate: " + err.Error())
 		resp(ctx, Error, fasthttp.StatusInternalServerError)
 		return
 	}
@@ -35,7 +32,6 @@ func (self *ForumPgsql) PostsCreate(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) PostUpdate(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] PostUpdate")
 	post := &models.Post{}
 	post.ID = int32(postIDToInt(ctx))
 
@@ -56,7 +52,6 @@ func (self *ForumPgsql) PostUpdate(ctx *fasthttp.RequestCtx) {
 }
 
 func (self *ForumPgsql) PostGetOne(ctx *fasthttp.RequestCtx) {
-	log.Println("[INFO] PostGetOne")
 	postFull := &models.PostFull{}
 	postFull.Post = &models.Post{}
 
