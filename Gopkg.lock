@@ -2,47 +2,12 @@
 
 
 [[projects]]
-  digest = "1:320e7ead93de9fd2b0e59b50fd92a4d50c1f8ab455d96bc2eb083267453a9709"
-  name = "github.com/asaskevich/govalidator"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
-  version = "v9"
-
-[[projects]]
   digest = "1:652880afc6b57ce0a67173f552cb35ccda816493a1da6ca20e5074a66bcd083f"
   name = "github.com/buaazp/fasthttprouter"
   packages = ["."]
   pruneopts = "UT"
   revision = "ade4e2031af3aed7fffd241084aad80a58faf421"
   version = "v0.1.1"
-
-[[projects]]
-  branch = "master"
-  digest = "1:7fb51688eadf38272411852d7a2b3538c7caff53309abee6c0964a83c00fe69e"
-  name = "github.com/globalsign/mgo"
-  packages = [
-    "bson",
-    "internal/json",
-  ]
-  pruneopts = "UT"
-  revision = "1ca0a4f7cbcbe61c005d1bd43fdd8bb8b71df6bc"
-
-[[projects]]
-  digest = "1:ac4b35a4bba11edb2110fca0707bae03ae92fbd8222e6b483465d98efaabfb97"
-  name = "github.com/go-openapi/errors"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "d9664f9fab8994271e573ed69cf2adfc09b7a800"
-  version = "v0.17.0"
-
-[[projects]]
-  digest = "1:a4235bc1ae951c708bbf46cee7874ebb88e664614a98a7403fb115bb400c231c"
-  name = "github.com/go-openapi/strfmt"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "35fe47352985e13cc75f13120d70d26fd764ed51"
-  version = "v0.17.0"
 
 [[projects]]
   digest = "1:aaa8e0e7e35d92e21daed3f241832cee73d15ca1cd3302ba3843159a959a7eac"
@@ -78,14 +43,6 @@
   revision = "60711f1a8329503b04e1c88535f419d0bb440bff"
 
 [[projects]]
-  digest = "1:53bc4cd4914cd7cd52139990d5170d6dc99067ae31c56530621b18b35fc30318"
-  name = "github.com/mitchellh/mapstructure"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
-  version = "v1.1.2"
-
-[[projects]]
   digest = "1:c468422f334a6b46a19448ad59aaffdfc0a36b08fdcc1c749a0b29b6453d7e59"
   name = "github.com/valyala/bytebufferpool"
   packages = ["."]
@@ -118,7 +75,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/buaazp/fasthttprouter",
-    "github.com/go-openapi/strfmt",
     "github.com/mailru/easyjson",
     "github.com/mailru/easyjson/jlexer",
     "github.com/mailru/easyjson/jwriter",

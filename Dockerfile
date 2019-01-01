@@ -67,4 +67,4 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 # Запускаем PostgreSQL и сервер
 #
 
-CMD service postgresql start && forum-server --scheme=http --port=5000 --host=0.0.0.0 --database=postgres://docker:docker@localhost/docker
+CMD service postgresql start && forum-server -port=5000  -db=postgres://docker:docker@localhost/docker

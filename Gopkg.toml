@@ -26,65 +26,21 @@
 
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/dre1080/recover"
-
-[[constraint]]
-  name = "github.com/elazarl/go-bindata-assetfs"
-  version = "1.0.0"
-
-[[constraint]]
-  name = "github.com/go-openapi/errors"
-  version = "0.17.0"
-
-[[constraint]]
-  name = "github.com/go-openapi/runtime"
-  version = "0.17.0"
-
-[[constraint]]
-  name = "github.com/go-openapi/swag"
-  version = "0.17.0"
-
-[[constraint]]
-  name = "github.com/jessevdk/go-flags"
-  version = "1.4.0"
+  name = "github.com/buaazp/fasthttprouter"
+  version = "0.1.1"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/jmoiron/sqlx"
+  name = "github.com/mailru/easyjson"
 
 [[constraint]]
-  name = "github.com/lib/pq"
-  version = "1.0.0"
-
-[[constraint]]
-  name = "github.com/mattn/go-sqlite3"
-  version = "1.9.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/rubenv/sql-migrate"
-
-[[constraint]]
-  name = "github.com/tylerb/graceful"
-  version = "1.2.15"
-
-[prune]
-  go-tests = true
-  unused-packages = true
-
-[[constraint]]
-  name = "github.com/go-swagger/go-swagger"
-  version = "0.17.0"
-
-[[constraint]]
-  branch = "master"
-  name = "golang.org/x/net"
+  name = "github.com/valyala/fasthttp"
+  version = "20180529.0.0"
 
 [[constraint]]
   name = "gopkg.in/jackc/pgx.v2"
   version = "2.11.0"
 
-[[constraint]]
-  name = "github.com/buaazp/fasthttprouter"
-  version = "0.1.1"
+[prune]
+  go-tests = true
+  unused-packages = true

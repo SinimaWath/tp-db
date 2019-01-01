@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/go-openapi/strfmt"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
 
@@ -126,17 +125,4 @@ func ifThreadExistAndGetIDForumSlugBySlug(db *pgx.ConnPool, slug string) (string
 		return forum, id, false, err
 	}
 	return forum, id, true, nil
-}
-
-func dateTimeToString(date *strfmt.DateTime) pgx.NullString {
-	time := pgx.NullString{}
-	if date != nil {
-		time.String = date.String()
-		time.Valid = true
-	} else {
-		time.String = ""
-		time.Valid = false
-	}
-
-	return time
 }
