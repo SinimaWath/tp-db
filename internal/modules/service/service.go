@@ -5,28 +5,29 @@ import (
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
-	"github.com/SinimaWath/tp-db/internal/restapi/operations"
-	"github.com/go-openapi/runtime/middleware"
+	"github.com/valyala/fasthttp"
 )
 
-func (self *ForumPgsql) Clear(operations.ClearParams) middleware.Responder {
+func (self *ForumPgsql) Clear(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] Clear")
 	err := database.Clear(self.db)
 	if err != nil {
-		log.Println("[ERROR] Clear: " + err.Error())
-		return nil
+		return
 	}
 
-	return operations.NewClearOK()
+	ctx.SetContentType("application/json")
+	ctx.SetStatusCode(fasthttp.StatusOK)
+	return
 }
 
-func (self *ForumPgsql) Status(params operations.StatusParams) middleware.Responder {
+func (self *ForumPgsql) Status(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] Status")
 	status := &models.Status{}
 	err := database.Status(self.db, status)
 	if err != nil {
 		log.Println("[ERROR] Status: " + err.Error())
-		return nil
+		return
 	}
-	return operations.NewStatusOK().WithPayload(status)
+	resp(ctx, status, fasthttp.StatusOK)
+	return
 }

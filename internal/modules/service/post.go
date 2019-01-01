@@ -2,59 +2,75 @@ package service
 
 import (
 	"log"
+	"strings"
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
-	"github.com/SinimaWath/tp-db/internal/restapi/operations"
-	"github.com/go-openapi/runtime/middleware"
+	"github.com/valyala/fasthttp"
 )
 
-func (self *ForumPgsql) PostsCreate(paramas operations.PostsCreateParams) middleware.Responder {
+func (self *ForumPgsql) PostsCreate(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] PostsCreate")
-	posts, err := database.PostsCreate(self.db, paramas.SlugOrID, paramas.Posts)
+
+	p := models.Posts{}
+	p.UnmarshalJSON(ctx.PostBody())
+
+	posts, err := database.PostsCreate(self.db, ctx.UserValue("slug_or_id").(string), p)
 	if err != nil {
 		switch err {
 		case database.ErrThreadNotFound, database.ErrUserNotFound:
-			return operations.NewPostsCreateNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		case database.ErrPostConflict:
-			return operations.NewPostsCreateConflict().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusConflict)
+			return
 		}
 
 		log.Println("[ERROR] PostsCreate: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
-	return operations.NewPostsCreateCreated().WithPayload(posts)
+	resp(ctx, posts, fasthttp.StatusCreated)
+	return
 }
 
-func (self *ForumPgsql) PostUpdate(params operations.PostUpdateParams) middleware.Responder {
+func (self *ForumPgsql) PostUpdate(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] PostUpdate")
 	post := &models.Post{}
-	post.ID = params.ID
-	err := database.UpdatePost(self.db, post, params.Post)
+	post.ID = int32(postIDToInt(ctx))
+
+	pU := &models.PostUpdate{}
+	pU.UnmarshalJSON(ctx.PostBody())
+	err := database.UpdatePost(self.db, post, pU)
 	if err != nil {
 		if err == database.ErrPostNotFound {
-			return operations.NewPostUpdateNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		}
 
-		log.Println("[ERROR] PostUpdate: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
-	return operations.NewPostUpdateOK().WithPayload(post)
+	resp(ctx, post, fasthttp.StatusOK)
+	return
 }
 
-func (self *ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Responder {
+func (self *ForumPgsql) PostGetOne(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] PostGetOne")
 	postFull := &models.PostFull{}
 	postFull.Post = &models.Post{}
 
-	postFull.Post.ID = params.ID
-	err := database.SelectPostFull(self.db, params.Related, postFull)
+	postFull.Post.ID = int32(postIDToInt(ctx))
+	related := ctx.QueryArgs().Peek("related")
+	err := database.SelectPostFull(self.db, strings.Split(string(related), ","), postFull)
 	if err != nil {
 		if err == database.ErrPostNotFound {
-			return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		}
-		log.Println("[ERROR] PostGetOne: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
-	return operations.NewPostGetOneOK().WithPayload(postFull)
+	resp(ctx, postFull, fasthttp.StatusOK)
+	return
 }

@@ -112,7 +112,7 @@ const (
 	ORDER BY u.nickname DESC`
 )
 
-func SelectAllUsersByForum(db *pgx.ConnPool, slug string, limit *int32, desc *bool, since *string,
+func SelectAllUsersByForum(db *pgx.ConnPool, slug string, limit int, desc bool, since string,
 	users *models.Users) error {
 
 	if isExist, err := checkForumExist(db, slug); err != nil {
@@ -123,22 +123,22 @@ func SelectAllUsersByForum(db *pgx.ConnPool, slug string, limit *int32, desc *bo
 
 	var rows *pgx.Rows
 	var err error
-	if desc != nil && *desc == true {
-		if since != nil && limit != nil {
+	if desc == true {
+		if since != "" && limit > 0 {
 			rows, err = db.Query(selectAllUsersByForumLimitSinceDesc, slug, since, limit)
-		} else if since != nil {
+		} else if since != "" {
 			rows, err = db.Query(selectAllUsersByForumSinceDesc, slug, since)
-		} else if limit != nil {
+		} else if limit > 0 {
 			rows, err = db.Query(selectAllUsersByForumLimitDesc, slug, limit)
 		} else {
 			rows, err = db.Query(selectAllUsersByForumDesc, slug)
 		}
 	} else {
-		if since != nil && limit != nil {
+		if since != "" && limit > 0 {
 			rows, err = db.Query(selectAllUsersByForumLimitSince, slug, since, limit)
-		} else if since != nil {
+		} else if since != "" {
 			rows, err = db.Query(selectAllUsersByForumSince, slug, since)
-		} else if limit != nil {
+		} else if limit > 0 {
 			rows, err = db.Query(selectAllUsersByForumLimit, slug, limit)
 		} else {
 			rows, err = db.Query(selectAllUsersByForum, slug)

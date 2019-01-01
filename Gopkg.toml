@@ -84,3 +84,7 @@
 [[constraint]]
   name = "gopkg.in/jackc/pgx.v2"
   version = "2.11.0"
+
+[[constraint]]
+  name = "github.com/buaazp/fasthttprouter"
+  version = "0.1.1"

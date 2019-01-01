@@ -6,7 +6,7 @@ CMD_PATH = ./internal/cmd/forum-server
 EXE_NAME = forum-server
 
 run:
-	$(EXE_NAME) --scheme=http --port=5001 --host=0.0.0.0 --database=postgres://postgres:admin@localhost/forum?sslmode=disable
+	$(EXE_NAME) -port=5001 -db=postgres://postgres:admin@localhost/forum?sslmode=disable
 install:
 	go install $(CMD_PATH)
 

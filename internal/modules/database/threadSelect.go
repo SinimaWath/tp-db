@@ -2,7 +2,6 @@ package database
 
 import (
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/go-openapi/strfmt"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
 
@@ -127,8 +126,8 @@ const (
 	`
 )
 
-func SelectAllThreadsByForum(db *pgx.ConnPool, slug string, limit *int32, desc *bool,
-	since *strfmt.DateTime, ts *models.Threads) error {
+func SelectAllThreadsByForum(db *pgx.ConnPool, slug string, limit int, desc bool,
+	since string, ts *models.Threads) error {
 
 	if isExist, err := checkForumExist(db, slug); err != nil {
 		return err
@@ -138,23 +137,23 @@ func SelectAllThreadsByForum(db *pgx.ConnPool, slug string, limit *int32, desc *
 
 	var rows *pgx.Rows
 	var err error
-	if desc != nil && *desc == true {
-		if limit != nil && since != nil {
-			rows, err = db.Query(selectAllThreadsSinceLimitDesc, slug, dateTimeToString(since), limit)
-		} else if limit != nil {
+	if desc == true {
+		if limit > 0 && since != "" {
+			rows, err = db.Query(selectAllThreadsSinceLimitDesc, slug, since, limit)
+		} else if limit > 0 {
 			rows, err = db.Query(selectAllThreadsLimitDesc, slug, limit)
-		} else if since != nil {
+		} else if since != "" {
 			rows, err = db.Query(selectAllThreadsSinceDesc, slug, since)
 		} else {
 			rows, err = db.Query(selectAllThreadsDesc, slug)
 		}
 	} else {
-		if limit != nil && since != nil {
-			rows, err = db.Query(selectAllThreadsSinceLimit, slug, dateTimeToString(since), limit)
-		} else if limit != nil {
+		if limit > 0 && since != "" {
+			rows, err = db.Query(selectAllThreadsSinceLimit, slug, since, limit)
+		} else if limit > 0 {
 			rows, err = db.Query(selectAllThreadsLimit, slug, limit)
-		} else if since != nil {
-			rows, err = db.Query(selectAllThreadsSince, slug, dateTimeToString(since))
+		} else if since != "" {
+			rows, err = db.Query(selectAllThreadsSince, slug, since)
 		} else {
 			rows, err = db.Query(selectAllThreads, slug)
 		}

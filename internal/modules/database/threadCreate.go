@@ -37,7 +37,7 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 	}
 
 	err = scanThread(tx.QueryRow(insertThread, slugToNullable(thread.Slug), thread.Author,
-		dateTimeToString(thread.Created), thread.Forum,
+		thread.Created, thread.Forum,
 		thread.Title, thread.Message), thread)
 
 	if err != nil {

@@ -5,21 +5,28 @@ import (
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
-	"github.com/SinimaWath/tp-db/internal/restapi/operations"
-	"github.com/go-openapi/runtime/middleware"
+	"github.com/valyala/fasthttp"
 )
 
-func (self *ForumPgsql) ThreadVote(params operations.ThreadVoteParams) middleware.Responder {
+func (self *ForumPgsql) ThreadVote(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] ThreadVote")
 	thread := &models.Thread{}
-	err := database.VoteCreate(self.db, params.SlugOrID, thread, params.Vote)
+	vote := &models.Vote{}
+
+	vote.UnmarshalJSON(ctx.PostBody())
+	err := database.VoteCreate(self.db, ctx.UserValue("slug_or_id").(string),
+		thread, vote)
+
 	if err != nil {
 		switch err {
 		case database.ErrThreadNotFound:
-			return operations.NewThreadVoteNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		}
 		log.Println("[ERROR] ThreadVote: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
-	return operations.NewThreadVoteOK().WithPayload(thread)
+	resp(ctx, thread, fasthttp.StatusOK)
+	return
 }

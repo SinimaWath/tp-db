@@ -28,11 +28,6 @@ ENV PATH $GOROOT/bin:$GOPATH/bin:/usr/local/go/bin:$PATH
 WORKDIR $GOPATH/src/github.com/SinimaWath/tp-db/
 ADD . $GOPATH/src/github.com/SinimaWath/tp-db/
 
-RUN go get -u github.com/go-swagger/go-swagger/cmd/swagger
-
-RUN make generate
-RUN make install
-
 # Объявлем порт сервера
 EXPOSE 5000
 
