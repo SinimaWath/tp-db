@@ -5,74 +5,95 @@ import (
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
-	"github.com/SinimaWath/tp-db/internal/restapi/operations"
-	"github.com/go-openapi/runtime/middleware"
+	"github.com/valyala/fasthttp"
 )
 
-func (self *ForumPgsql) ThreadCreate(params operations.ThreadCreateParams) middleware.Responder {
+func (self *ForumPgsql) ThreadCreate(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] ThreadCreate")
-	params.Thread.Forum = params.Slug
-	err := database.ThreadCreate(self.db, params.Thread)
+
+	t := &models.Thread{}
+	t.UnmarshalJSON(ctx.PostBody())
+	t.Forum = ctx.UserValue("slug").(string)
+	err := database.ThreadCreate(self.db, t)
 
 	if err != nil {
 		switch err {
 		case database.ErrThreadNotFoundAuthorOrForum:
-			return operations.NewThreadCreateNotFound().WithPayload(&models.Error{})
-
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		case database.ErrThreadConflict:
-			return operations.NewThreadCreateConflict().WithPayload(params.Thread)
+			resp(ctx, t, fasthttp.StatusConflict)
+			return
 		}
 		log.Println("[ERROR] ThreadCreate: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
 
-	return operations.NewThreadCreateCreated().WithPayload(params.Thread)
+	resp(ctx, t, fasthttp.StatusCreated)
+	return
 }
 
-func (self *ForumPgsql) ThreadGetOne(params operations.ThreadGetOneParams) middleware.Responder {
+func (self *ForumPgsql) ThreadGetOne(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] ThreadGetOne")
 	thread := &models.Thread{}
-	err := database.SelectThreadBySlugOrID(self.db, params.SlugOrID, thread)
+	err := database.SelectThreadBySlugOrID(self.db, ctx.UserValue("slug_or_id").(string),
+		thread)
 	if err != nil {
 		if err == database.ErrThreadNotFound {
-			return operations.NewThreadGetOneNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		}
-
-		log.Println("[ERROR] ThreadGetOne: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
 
-	return operations.NewThreadGetOneOK().WithPayload(thread)
+	resp(ctx, thread, fasthttp.StatusOK)
+	return
 }
 
-func (self *ForumPgsql) ThreadUpdate(params operations.ThreadUpdateParams) middleware.Responder {
+func (self *ForumPgsql) ThreadUpdate(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] ThreadUpdate")
+
 	thread := &models.Thread{}
-	err := database.UpdateThread(self.db, params.Thread, params.SlugOrID, thread)
+	tU := &models.ThreadUpdate{}
+	tU.UnmarshalJSON(ctx.PostBody())
+
+	err := database.UpdateThread(self.db, tU, ctx.UserValue("slug_or_id").(string), thread)
 	if err != nil {
 		if err == database.ErrThreadNotFound {
-			return operations.NewThreadUpdateNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		}
 
 		log.Println("[ERROR] ThreadUpdate: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
-	return operations.NewThreadUpdateOK().WithPayload(thread)
+
+	resp(ctx, thread, fasthttp.StatusOK)
+	return
 }
 
-func (self *ForumPgsql) ThreadGetPosts(params operations.ThreadGetPostsParams) middleware.Responder {
+func (self *ForumPgsql) ThreadGetPosts(ctx *fasthttp.RequestCtx) {
 	log.Println("[INFO] ThreadGetPosts")
 	posts := &models.Posts{}
-	err := database.SelectAllPostsByThread(self.db, params.SlugOrID, params.Limit,
-		params.Desc, params.Since, params.Sort, posts)
+
+	err := database.SelectAllPostsByThread(self.db, ctx.UserValue("slug_or_id").(string),
+		ctx.QueryArgs().GetUintOrZero("limit"), getBool("desc", ctx.QueryArgs()),
+		ctx.QueryArgs().GetUintOrZero("since"),
+		string(ctx.QueryArgs().Peek("sort")), posts)
 
 	if err != nil {
 		if err == database.ErrThreadNotFound {
-			return operations.NewThreadGetPostsNotFound().WithPayload(&models.Error{})
+			resp(ctx, Error, fasthttp.StatusNotFound)
+			return
 		}
 
 		log.Println("[ERROR] ThreadGetPosts: " + err.Error())
-		return nil
+		resp(ctx, Error, fasthttp.StatusInternalServerError)
+		return
 	}
-	return operations.NewThreadGetPostsOK().WithPayload(*posts)
+	resp(ctx, *posts, fasthttp.StatusOK)
+	return
 }

@@ -1,5 +1,10 @@
 # Idea project files
 .idea/
 .vscode/
+.vendor-new/
+report.html
+Gopkg.lock
+Gopkg.toml
+Makefile
 # Database sqlite3
 *.db

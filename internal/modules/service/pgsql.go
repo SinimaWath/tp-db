@@ -3,15 +3,13 @@ package service
 import (
 	"log"
 
+	"github.com/SinimaWath/tp-db/internal/models"
 	"gopkg.in/jackc/pgx.v2"
 )
 
 const postgres = "postgres"
 
-const (
-	pgErrCodeUniqueViolation = "23505"
-	pgErrForeignKeyViolation = "23503"
-)
+var Error models.Error
 
 type ForumPgsql struct {
 	db *pgx.ConnPool
@@ -24,7 +22,6 @@ func NewForumPgsql(config *pgx.ConnConfig) *ForumPgsql {
 		AfterConnect:   nil,
 		AcquireTimeout: 0,
 	}
-	log.Println(*config)
 	p, err := pgx.NewConnPool(poolConfig)
 	if err != nil {
 		log.Fatal(err)

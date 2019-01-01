@@ -28,11 +28,6 @@ ENV PATH $GOROOT/bin:$GOPATH/bin:/usr/local/go/bin:$PATH
 WORKDIR $GOPATH/src/github.com/SinimaWath/tp-db/
 ADD . $GOPATH/src/github.com/SinimaWath/tp-db/
 
-RUN go get -u github.com/go-swagger/go-swagger/cmd/swagger
-
-RUN make generate
-RUN make install
-
 # Объявлем порт сервера
 EXPOSE 5000
 
@@ -72,4 +67,4 @@ VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
 # Запускаем PostgreSQL и сервер
 #
 
-CMD service postgresql start && forum-server --scheme=http --port=5000 --host=0.0.0.0 --database=postgres://docker:docker@localhost/docker
+CMD service postgresql start && forum-server -port=5000  -db=postgres://docker:docker@localhost/docker

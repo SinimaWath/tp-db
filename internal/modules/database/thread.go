@@ -4,10 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
-	"time"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/go-openapi/strfmt"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
 
@@ -20,47 +18,26 @@ var (
 // Последовательность id, slug, user_nick, created, forum_slug, title, message, votes
 func scanThread(r *pgx.Row, t *models.Thread) error {
 	slug := sql.NullString{}
-	created := pgx.NullTime{}
-	err := r.Scan(&t.ID, &slug, &t.Author, &created, &t.Forum, &t.Title, &t.Message, &t.Votes)
+
+	err := r.Scan(&t.ID, &slug, &t.Author, &t.Created, &t.Forum, &t.Title, &t.Message, &t.Votes)
 	if err != nil {
 		return err
 	}
 	if slug.Valid {
 		t.Slug = slug.String
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			t.Created = nil
-		} else {
-			t.Created = &date
-		}
-	} else {
-		t.Created = nil
-	}
-
 	return err
 }
 
 func scanThreadRows(r *pgx.Rows, t *models.Thread) error {
 	slug := sql.NullString{}
-	created := time.Time{}
-	err := r.Scan(&t.ID, &slug, &t.Author, &created, &t.Forum, &t.Title, &t.Message, &t.Votes)
+	err := r.Scan(&t.ID, &slug, &t.Author, &t.Created, &t.Forum, &t.Title, &t.Message, &t.Votes)
 	if err != nil {
 		return err
 	}
 	if slug.Valid {
 		t.Slug = slug.String
 	}
-
-	date, err := strfmt.ParseDateTime(created.Format(strfmt.MarshalFormat))
-	if err != nil {
-		t.Created = nil
-	} else {
-		t.Created = &date
-	}
-
 	return err
 }
 
@@ -148,17 +125,4 @@ func ifThreadExistAndGetIDForumSlugBySlug(db *pgx.ConnPool, slug string) (string
 		return forum, id, false, err
 	}
 	return forum, id, true, nil
-}
-
-func dateTimeToString(date *strfmt.DateTime) pgx.NullString {
-	time := pgx.NullString{}
-	if date != nil {
-		time.String = date.String()
-		time.Valid = true
-	} else {
-		time.String = ""
-		time.Valid = false
-	}
-
-	return time
 }

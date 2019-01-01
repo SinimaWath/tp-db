@@ -4,7 +4,6 @@ import (
 	"database/sql"
 
 	"github.com/SinimaWath/tp-db/internal/models"
-	"github.com/go-openapi/strfmt"
 	pgx "gopkg.in/jackc/pgx.v2"
 )
 
@@ -68,12 +67,10 @@ const (
 func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
-	created := pgx.NullTime{}
-	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumUserThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -87,7 +84,7 @@ func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error 
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&createdThread,
+		&pf.Thread.Created,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
@@ -97,7 +94,6 @@ func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error 
 		&pf.Author.About,
 		&pf.Author.Email,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -107,37 +103,11 @@ func selectPostWithForumUserThread(db *pgx.ConnPool, pf *models.PostFull) error 
 	} else {
 		pf.Post.Parent = 0
 	}
-
 	if slugThread.Valid {
 		pf.Thread.Slug = slugThread.String
 	} else {
 		pf.Thread.Slug = ""
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Thread.Created = nil
-			return err
-		} else {
-			pf.Thread.Created = &date
-		}
-	} else {
-		pf.Thread.Created = nil
-	}
-
 	return nil
 }
 
@@ -155,12 +125,10 @@ const (
 func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
-	created := pgx.NullTime{}
-	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithUserThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -169,7 +137,7 @@ func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&createdThread,
+		&pf.Thread.Created,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
@@ -195,31 +163,6 @@ func selectPostWithUserThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	} else {
 		pf.Thread.Slug = ""
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Thread.Created = nil
-			return err
-		} else {
-			pf.Thread.Created = &date
-		}
-	} else {
-		pf.Thread.Created = nil
-	}
-
 	return nil
 }
 
@@ -237,12 +180,10 @@ const (
 func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
-	created := pgx.NullTime{}
-	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -256,7 +197,7 @@ func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&createdThread,
+		&pf.Thread.Created,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
@@ -278,31 +219,6 @@ func selectPostWithForumThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	} else {
 		pf.Thread.Slug = ""
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Thread.Created = nil
-			return err
-		} else {
-			pf.Thread.Created = &date
-		}
-	} else {
-		pf.Thread.Created = nil
-	}
-
 	return nil
 }
 
@@ -319,11 +235,10 @@ const (
 
 func selectPostWithForumUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
-	created := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumUserQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -349,19 +264,6 @@ func selectPostWithForumUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	} else {
 		pf.Post.Parent = 0
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
-
 	return nil
 }
 
@@ -377,12 +279,10 @@ const (
 func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
 	slugThread := sql.NullString{}
-	created := pgx.NullTime{}
-	createdThread := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithThreadQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -391,7 +291,7 @@ func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 		&pf.Thread.ID,
 		&slugThread,
 		&pf.Thread.Author,
-		&createdThread,
+		&pf.Thread.Created,
 		&pf.Thread.Forum,
 		&pf.Thread.Title,
 		&pf.Thread.Message,
@@ -413,31 +313,6 @@ func selectPostWithThread(db *pgx.ConnPool, pf *models.PostFull) error {
 	} else {
 		pf.Thread.Slug = ""
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(createdThread.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Thread.Created = nil
-			return err
-		} else {
-			pf.Thread.Created = &date
-		}
-	} else {
-		pf.Thread.Created = nil
-	}
-
 	return nil
 }
 
@@ -453,11 +328,10 @@ const (
 
 func selectPostWithForum(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
-	created := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithForumQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -480,17 +354,6 @@ func selectPostWithForum(db *pgx.ConnPool, pf *models.PostFull) error {
 		pf.Post.Parent = 0
 	}
 
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
 	return nil
 }
 
@@ -505,11 +368,10 @@ const (
 
 func selectPostWithUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	parent := sql.NullInt64{}
-	created := pgx.NullTime{}
 	err := db.QueryRow(selectPostWithUserQuery, pf.Post.ID).Scan(
 		&pf.Post.ID,
 		&pf.Post.Author,
-		&created,
+		&pf.Post.Created,
 		&pf.Post.IsEdited,
 		&pf.Post.Message,
 		&parent,
@@ -530,19 +392,6 @@ func selectPostWithUser(db *pgx.ConnPool, pf *models.PostFull) error {
 	} else {
 		pf.Post.Parent = 0
 	}
-
-	if created.Valid {
-		date, err := strfmt.ParseDateTime(created.Time.Format(strfmt.MarshalFormat))
-		if err != nil {
-			pf.Post.Created = nil
-			return err
-		} else {
-			pf.Post.Created = &date
-		}
-	} else {
-		pf.Post.Created = nil
-	}
-
 	return nil
 }
 
@@ -557,8 +406,8 @@ func selectPost(db *pgx.ConnPool, pf *models.Post) error {
 	return scanPost(db.QueryRow(selectPostQuery, pf.ID), pf)
 }
 
-func SelectAllPostsByThread(db *pgx.ConnPool, slugOrIDThread string, limit *int32, desc *bool,
-	since *int64, sort *string, posts *models.Posts) error {
+func SelectAllPostsByThread(db *pgx.ConnPool, slugOrIDThread string, limit int, desc bool,
+	since int, sort string, posts *models.Posts) error {
 
 	isExist := false
 	var err error
@@ -696,8 +545,8 @@ const selectPostsParentTreeLimitSinceDescByID = `
 	ORDER BY p.path[1] DESC, p.path[2:]
 `
 
-func selectAllPostsByThreadID(db *pgx.ConnPool, id int, limit *int32, desc *bool,
-	since *int64, sort *string, posts *models.Posts) error {
+func selectAllPostsByThreadID(db *pgx.ConnPool, id int, limit int, desc bool,
+	since int, sort string, posts *models.Posts) error {
 
 	rows, err := doQuery(db, id, limit, desc, since, sort)
 	if err != nil {
@@ -718,14 +567,16 @@ func selectAllPostsByThreadID(db *pgx.ConnPool, id int, limit *int32, desc *bool
 	return nil
 }
 
-func doQuery(db *pgx.ConnPool, id int, limit *int32, desc *bool,
-	since *int64, sort *string) (*pgx.Rows, error) {
+func doQuery(db *pgx.ConnPool, id int, limit int, desc bool,
+	since int, sort string) (*pgx.Rows, error) {
 	var rows *pgx.Rows
 	var err error
-	switch *sort {
+	switch sort {
+	case "":
+		fallthrough
 	case "flat":
-		if since != nil {
-			if desc != nil && *desc == true {
+		if since > 0 {
+			if desc {
 				rows, err = db.Query(selectPostsFlatLimitSinceDescByID, id,
 					since, limit)
 			} else {
@@ -733,15 +584,15 @@ func doQuery(db *pgx.ConnPool, id int, limit *int32, desc *bool,
 					since, limit)
 			}
 		} else {
-			if desc != nil && *desc == true {
+			if desc == true {
 				rows, err = db.Query(selectPostsFlatLimitDescByID, id, limit)
 			} else {
 				rows, err = db.Query(selectPostsFlatLimitByID, id, limit)
 			}
 		}
 	case "tree":
-		if since != nil {
-			if desc != nil && *desc {
+		if since > 0 {
+			if desc {
 				rows, err = db.Query(selectPostsTreeLimitSinceDescByID, id,
 					since, limit)
 			} else {
@@ -749,15 +600,15 @@ func doQuery(db *pgx.ConnPool, id int, limit *int32, desc *bool,
 					since, limit)
 			}
 		} else {
-			if desc != nil && *desc {
+			if desc {
 				rows, err = db.Query(selectPostsTreeLimitDescByID, id, limit)
 			} else {
 				rows, err = db.Query(selectPostsTreeLimitByID, id, limit)
 			}
 		}
 	case "parent_tree":
-		if since != nil {
-			if desc != nil && *desc {
+		if since > 0 {
+			if desc {
 				rows, err = db.Query(selectPostsParentTreeLimitSinceDescByID, id, id,
 					since, limit)
 			} else {
@@ -765,7 +616,7 @@ func doQuery(db *pgx.ConnPool, id int, limit *int32, desc *bool,
 					since, limit)
 			}
 		} else {
-			if desc != nil && *desc {
+			if desc {
 				rows, err = db.Query(selectPostsParentTreeLimitDescByID, id, id,
 					limit)
 			} else {

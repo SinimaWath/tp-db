@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/SinimaWath/tp-db/internal/models"
 	"gopkg.in/jackc/pgx.v2"
@@ -138,20 +139,13 @@ func insertPostsTx(tx *pgx.Tx, threadID int, posts models.Posts, forumSlug strin
 func formInsertQuery(id int, posts models.Posts,
 	postsArgs *[]interface{}, forumUserArgs *[]interface{}, forumSlug string) (*string, *string) {
 
-	createdStr := ""
 	insertValues := ""
 	insertUserValues := ""
 	finalInsertValues := strings.Builder{}
 	finalUserInsertValues := strings.Builder{}
 
 	for idx, post := range posts {
-		if post.Created != nil {
-			createdStr = post.Created.String()
-		} else {
-			createdStr = ""
-		}
-
-		insertValues = formInsertValuesID(post.Author, createdStr, post.Message, id,
+		insertValues = formInsertValuesID(post.Author, post.Created, post.Message, id,
 			post.IsEdited, post.Parent, post.Thread, idx*5+1, postsArgs, forumSlug)
 
 		insertUserValues = formInsertUserValues(post.Author, idx*2+1, forumUserArgs, forumSlug)
@@ -192,7 +186,7 @@ const insertWithCheckParentID = `(
 		THEN %v ELSE -1 END)
 	)`
 
-func formInsertValuesID(author, created, message string, ID int, isEdited bool, parent int64,
+func formInsertValuesID(author string, created time.Time, message string, ID int, isEdited bool, parent int64,
 	thread int32, placeholderStart int, valuesArgs *[]interface{}, forumSlug string) string {
 	values := "("
 	valuesArr := []string{}
@@ -212,7 +206,7 @@ func formInsertValuesID(author, created, message string, ID int, isEdited bool, 
 	valuesArr = append(valuesArr, fmt.Sprintf("$%v", placeholder))
 	placeholder++
 
-	if created == "" {
+	if created.IsZero() {
 		*valuesArgs = append(*valuesArgs, "now()")
 	} else {
 		*valuesArgs = append(*valuesArgs, created)
