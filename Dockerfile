@@ -27,7 +27,7 @@ ENV PATH $GOROOT/bin:$GOPATH/bin:/usr/local/go/bin:$PATH
 # Копируем исходный код в Docker-контейнер
 WORKDIR $GOPATH/src/github.com/SinimaWath/tp-db/
 ADD . $GOPATH/src/github.com/SinimaWath/tp-db/
-
+RUN go install ./internal/cmd/forum-server
 # Объявлем порт сервера
 EXPOSE 5000
 
@@ -45,7 +45,7 @@ USER postgres
 RUN /etc/init.d/postgresql start &&\
     psql --command "CREATE USER docker WITH SUPERUSER PASSWORD 'docker';" &&\
     createdb -O docker docker &&\
-    psql docker -a -f assets/db/postgres/create.sql &&\
+    psql docker -a -f scheme.sql &&\
     /etc/init.d/postgresql stop
 
 USER root
