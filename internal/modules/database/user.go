@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	ErrUserConflict = errors.New("UserC")
-	ErrUserNotFound = errors.New("UserN")
+	ErrUserConflict = errors.New("UC")
+	ErrUserNotFound = errors.New("UN")
 )
 
 // Последовательность Nickname Fullname About Email

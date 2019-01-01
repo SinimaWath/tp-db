@@ -1,8 +1,6 @@
 package service
 
 import (
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"github.com/SinimaWath/tp-db/internal/modules/database"
 	"github.com/SinimaWath/tp-db/internal/restapi/operations"
@@ -10,7 +8,6 @@ import (
 )
 
 func (self *ForumPgsql) PostsCreate(paramas operations.PostsCreateParams) middleware.Responder {
-	log.Println("[INFO] PostsCreate")
 	posts, err := database.PostsCreate(self.db, paramas.SlugOrID, paramas.Posts)
 	if err != nil {
 		switch err {
@@ -20,14 +17,12 @@ func (self *ForumPgsql) PostsCreate(paramas operations.PostsCreateParams) middle
 			return operations.NewPostsCreateConflict().WithPayload(&models.Error{})
 		}
 
-		log.Println("[ERROR] PostsCreate: " + err.Error())
 		return nil
 	}
 	return operations.NewPostsCreateCreated().WithPayload(posts)
 }
 
 func (self *ForumPgsql) PostUpdate(params operations.PostUpdateParams) middleware.Responder {
-	log.Println("[INFO] PostUpdate")
 	post := &models.Post{}
 	post.ID = params.ID
 	err := database.UpdatePost(self.db, post, params.Post)
@@ -36,14 +31,12 @@ func (self *ForumPgsql) PostUpdate(params operations.PostUpdateParams) middlewar
 			return operations.NewPostUpdateNotFound().WithPayload(&models.Error{})
 		}
 
-		log.Println("[ERROR] PostUpdate: " + err.Error())
 		return nil
 	}
 	return operations.NewPostUpdateOK().WithPayload(post)
 }
 
 func (self *ForumPgsql) PostGetOne(params operations.PostGetOneParams) middleware.Responder {
-	log.Println("[INFO] PostGetOne")
 	postFull := &models.PostFull{}
 	postFull.Post = &models.Post{}
 
@@ -53,7 +46,6 @@ func (self *ForumPgsql) PostGetOne(params operations.PostGetOneParams) middlewar
 		if err == database.ErrPostNotFound {
 			return operations.NewPostGetOneNotFound().WithPayload(&models.Error{})
 		}
-		log.Println("[ERROR] PostGetOne: " + err.Error())
 		return nil
 	}
 	return operations.NewPostGetOneOK().WithPayload(postFull)

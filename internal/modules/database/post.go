@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	ErrPostConflict = errors.New("PostC")
-	ErrPostNotFound = errors.New("PostN")
+	ErrPostConflict = errors.New("PC")
+	ErrPostNotFound = errors.New("PN")
 )
 
 // id, author, created, edited, message, parent_id, thread_id, forum_slug

@@ -1,8 +1,6 @@
 package database
 
 import (
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"gopkg.in/jackc/pgx.v2"
 )
@@ -23,14 +21,12 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println("[ERROR] ThreadCreate db.Begin(): " + err.Error())
 		return err
 	}
 
 	_, err = tx.Exec("SET LOCAL synchronous_commit TO OFF")
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		return err
@@ -41,9 +37,7 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 		thread.Title, thread.Message), thread)
 
 	if err != nil {
-		log.Println(err)
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		if err, ok := err.(pgx.PgError); ok {
@@ -53,7 +47,6 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 			case pgErrCodeUniqueViolation:
 				err := SelectThreadBySlug(db, thread)
 				if err != nil {
-					log.Println("[ERROR] ThreadCreate pgErrCodeUniqueViolation: " + err.Error())
 					return err
 				}
 				return ErrThreadConflict
@@ -66,7 +59,6 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		return err
@@ -77,14 +69,12 @@ func ThreadCreate(db *pgx.ConnPool, thread *models.Thread) error {
 	if err != nil {
 
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] ThreadCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		return err
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		log.Println("[ERROR] ThreadCreate tx.Commit(): " + commitErr.Error())
 		return commitErr
 	}
 

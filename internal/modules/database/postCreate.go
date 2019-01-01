@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/SinimaWath/tp-db/internal/models"
@@ -30,14 +29,12 @@ func PostsCreate(db *pgx.ConnPool, slugOrIDThread string, posts models.Posts) (m
 
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println("[ERROR] PostsCreate db.Begin(): " + err.Error())
 		return nil, err
 	}
 
 	_, err = tx.Exec("SET LOCAL synchronous_commit TO OFF")
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] PostsCreate tx.Rollback(): " + txErr.Error())
 			return nil, txErr
 		}
 		return nil, err
@@ -46,12 +43,10 @@ func PostsCreate(db *pgx.ConnPool, slugOrIDThread string, posts models.Posts) (m
 	resultPosts, err := insertPostsTx(tx, threadID, posts, forumSlug)
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] PostsCreate tx.Rollback(): " + txErr.Error())
 			return nil, txErr
 		}
 
 		if pqError, ok := err.(pgx.PgError); ok {
-			log.Println(pqError.Code)
 			switch pqError.Code {
 			case pgErrForeignKeyViolation:
 				if pqError.ConstraintName == "post_parent_id_fkey" {
@@ -66,7 +61,6 @@ func PostsCreate(db *pgx.ConnPool, slugOrIDThread string, posts models.Posts) (m
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		log.Println("[ERROR] PostsCreate tx.Commit(): " + commitErr.Error())
 		return nil, commitErr
 	}
 

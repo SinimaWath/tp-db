@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrThreadNotFoundAuthorOrForum = errors.New("ThreadNAF")
-	ErrThreadNotFound              = errors.New("ThreadN")
-	ErrThreadConflict              = errors.New("ThreadC")
+	ErrThreadNotFoundAuthorOrForum = errors.New("TNAF")
+	ErrThreadNotFound              = errors.New("TN")
+	ErrThreadConflict              = errors.New("TC")
 )
 
 // Последовательность id, slug, user_nick, created, forum_slug, title, message, votes

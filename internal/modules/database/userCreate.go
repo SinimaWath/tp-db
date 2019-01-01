@@ -1,8 +1,6 @@
 package database
 
 import (
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"gopkg.in/jackc/pgx.v2"
 )
@@ -32,7 +30,6 @@ func CreateUser(db *pgx.ConnPool, user *models.User) error {
 
 	if err != nil {
 		if pqError, ok := err.(pgx.PgError); ok {
-			log.Println(pqError.Code)
 			switch pqError.Code {
 			case pgErrCodeUniqueViolation:
 				return ErrUserConflict

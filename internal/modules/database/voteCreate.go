@@ -1,8 +1,6 @@
 package database
 
 import (
-	"log"
-
 	"github.com/SinimaWath/tp-db/internal/models"
 	"gopkg.in/jackc/pgx.v2"
 )
@@ -30,14 +28,12 @@ func VoteCreate(db *pgx.ConnPool, slugOrId string, t *models.Thread, v *models.V
 	voteBool := voteIntToBool(v.Voice)
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println("[ERROR] VoteCreate db.Begin(): " + err.Error())
 		return err
 	}
 
 	_, err = tx.Exec("SET LOCAL synchronous_commit TO OFF")
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] VoteCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		return err
@@ -46,7 +42,6 @@ func VoteCreate(db *pgx.ConnPool, slugOrId string, t *models.Thread, v *models.V
 	_, err = tx.Exec(insertVote, v.Nickname, voteBool, t.ID)
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] VoteCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		if pqError, ok := err.(pgx.PgError); ok {
@@ -61,14 +56,12 @@ func VoteCreate(db *pgx.ConnPool, slugOrId string, t *models.Thread, v *models.V
 	err = threadUpdateVotesCountTx(tx, t)
 	if err != nil {
 		if txErr := tx.Rollback(); txErr != nil {
-			log.Println("[ERROR] VoteCreate tx.Rollback(): " + txErr.Error())
 			return txErr
 		}
 		return err
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		log.Println("[ERROR] VoteCreate tx.Commit(): " + commitErr.Error())
 		return commitErr
 	}
 
