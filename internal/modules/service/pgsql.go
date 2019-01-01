@@ -20,11 +20,10 @@ type ForumPgsql struct {
 func NewForumPgsql(config *pgx.ConnConfig) *ForumPgsql {
 	poolConfig := pgx.ConnPoolConfig{
 		ConnConfig:     *config,
-		MaxConnections: 8,
+		MaxConnections: 50,
 		AfterConnect:   nil,
 		AcquireTimeout: 0,
 	}
-	log.Println(*config)
 	p, err := pgx.NewConnPool(poolConfig)
 	if err != nil {
 		log.Fatal(err)

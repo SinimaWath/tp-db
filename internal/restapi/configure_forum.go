@@ -50,8 +50,6 @@ func configureAPI(api *operations.ForumAPI) http.Handler {
 
 	api.JSONProducer = runtime.JSONProducer()
 
-	log.Printf("configure Api")
-	log.Println(dbFlags.Database)
 	config, err := pgx.ParseConnectionString(dbFlags.Database)
 	if err != nil {
 		log.Fatal(err)
